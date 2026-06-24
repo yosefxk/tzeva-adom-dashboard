@@ -16,44 +16,15 @@ interface StatusCardProps {
   lang: Language;
 }
 
-// Play the real Israeli air raid siren (צפירה) using Web Audio API synthesis
-// This faithfully recreates the rising-falling tone pattern of the Israeli civil defense siren
-export function playIsraeliSiren() {
+// Play the real Israeli air raid siren (צפירה) using the siren.mp3 static asset
+export function playIsraeliSiren(onEnded?: () => void) {
   try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const now = audioCtx.currentTime;
-
-    // The Israeli siren is characterized by a slow, sweeping rise from ~380Hz to ~780Hz
-    // over ~3.5s, then a fall back down over ~3.5s, repeated
-    const createSirenCycle = (startTime: number) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      
-      osc.type = 'sawtooth';
-      
-      // Rising phase: ~380Hz → ~780Hz over 3.5s
-      osc.frequency.setValueAtTime(380, startTime);
-      osc.frequency.linearRampToValueAtTime(780, startTime + 3.5);
-      // Falling phase: ~780Hz → ~380Hz over 3.5s
-      osc.frequency.linearRampToValueAtTime(380, startTime + 7.0);
-      
-      // Volume envelope
-      gain.gain.setValueAtTime(0.0, startTime);
-      gain.gain.linearRampToValueAtTime(0.22, startTime + 0.3);
-      gain.gain.setValueAtTime(0.22, startTime + 6.5);
-      gain.gain.linearRampToValueAtTime(0.0, startTime + 7.0);
-      
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      
-      osc.start(startTime);
-      osc.stop(startTime + 7.0);
-    };
-
-    // Play two full siren cycles (14 seconds total)
-    createSirenCycle(now);
-    createSirenCycle(now + 7.0);
-
+    const audio = new Audio('/siren.mp3');
+    if (onEnded) {
+      audio.onended = onEnded;
+    }
+    audio.play();
+    return audio;
   } catch (err) {
     console.error('Failed to play Israeli siren audio.', err);
   }
@@ -94,11 +65,11 @@ export default function StatusCard({ isConnected, lang }: StatusCardProps) {
   };
 
   const handleTestSiren = () => {
+    if (sirenPlaying) return;
     setSirenPlaying(true);
-    playIsraeliSiren();
-    setTimeout(() => {
+    playIsraeliSiren(() => {
       setSirenPlaying(false);
-    }, 14000);
+    });
   };
 
   useEffect(() => {
