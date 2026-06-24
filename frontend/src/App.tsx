@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-import { ShieldAlert, Map, History, BarChart2, Bell, Sun, Moon } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { ShieldAlert, Map, History, BarChart2, Bell, Sun, Moon, Globe } from 'lucide-react';
 import AlertMap from './components/AlertMap';
 import AlertHistory from './components/AlertHistory';
 import AlertStats from './components/AlertStats';
+import AlertHeatmap from './components/AlertHeatmap';
 import LiveFeed from './components/LiveFeed';
 import StatusCard, { playIsraeliSiren } from './components/StatusCard';
 import { t, translateCity } from './i18n';
@@ -31,9 +32,58 @@ export default function App() {
   const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>([]);
   const [sessionAlerts, setSessionAlerts] = useState<ActiveAlert[]>([]);
   
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  // Warnings and Audio configurations
+  const [soundMode, setSoundMode] = useState<'none' | 'all' | 'custom'>(() => {
+    return (localStorage.getItem('soundMode') as 'none' | 'all' | 'custom') || 'none';
+  });
+  const [volume, setVolume] = useState<number>(() => {
+    const val = localStorage.getItem('sirenVolume');
+    return val !== null ? parseFloat(val) : 0.8;
+  });
+  const [ttsEnabled, setTtsEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('ttsEnabled') === 'true';
+  });
+  const [subscribedZones, setSubscribedZones] = useState<any[]>(() => {
+    try {
+      const val = localStorage.getItem('subscribedZones');
+      return val ? JSON.parse(val) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const soundEnabled = soundMode !== 'none';
+  const setSoundEnabled = (enabled: boolean) => {
+    if (enabled) {
+      const lastMode = (localStorage.getItem('lastActiveSoundMode') as 'all' | 'custom') || 'all';
+      setSoundMode(lastMode);
+    } else {
+      if (soundMode !== 'none') {
+        localStorage.setItem('lastActiveSoundMode', soundMode);
+      }
+      setSoundMode('none');
+    }
+  };
+
+  // Sync settings state to localStorage
+  useEffect(() => {
+    localStorage.setItem('soundMode', soundMode);
+    if (soundMode !== 'none') {
+      localStorage.setItem('lastActiveSoundMode', soundMode);
+    }
+  }, [soundMode]);
+  useEffect(() => {
+    localStorage.setItem('sirenVolume', volume.toString());
+  }, [volume]);
+  useEffect(() => {
+    localStorage.setItem('ttsEnabled', ttsEnabled.toString());
+  }, [ttsEnabled]);
+  useEffect(() => {
+    localStorage.setItem('subscribedZones', JSON.stringify(subscribedZones));
+  }, [subscribedZones]);
+
   const [isConnected, setIsConnected] = useState(false);
-  const [activeTab, setActiveTab] = useState<'map' | 'history' | 'stats'>('map');
+  const [activeTab, setActiveTab] = useState<'map' | 'history' | 'stats' | 'heatmap'>('map');
 
   // Multi-Language State
   const [lang, setLang] = useState<Language>('en');
@@ -76,6 +126,49 @@ export default function App() {
       });
   }, []);
 
+  // References for SSE loop to prevent stream reconnection on settings changes
+  const soundModeRef = useRef(soundMode);
+  const volumeRef = useRef(volume);
+  const ttsEnabledRef = useRef(ttsEnabled);
+  const subscribedZonesRef = useRef(subscribedZones);
+  const langRef = useRef(lang);
+  const citiesRef = useRef(cities);
+
+  useEffect(() => { soundModeRef.current = soundMode; }, [soundMode]);
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
+  useEffect(() => { ttsEnabledRef.current = ttsEnabled; }, [ttsEnabled]);
+  useEffect(() => { subscribedZonesRef.current = subscribedZones; }, [subscribedZones]);
+  useEffect(() => { langRef.current = lang; }, [lang]);
+  useEffect(() => { citiesRef.current = cities; }, [cities]);
+
+  // TTS announcer engine
+  const playTTSAlert = (locations: string[]) => {
+    if (!('speechSynthesis' in window)) return;
+    
+    // Stop any ongoing announcement
+    window.speechSynthesis.cancel();
+    
+    const currentLang = langRef.current;
+    const currentCities = citiesRef.current;
+    const currentVolume = volumeRef.current;
+    
+    const translatedCities = locations.map(loc => translateCity(loc, currentLang, currentCities)).join(', ');
+    let text = '';
+    
+    if (currentLang === 'he') {
+      text = `צבע אדום ב: ${translatedCities}`;
+    } else if (currentLang === 'ar') {
+      text = `إنذار في: ${translatedCities}`;
+    } else {
+      text = `Red alert in: ${translatedCities}`;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = currentLang === 'he' ? 'he-IL' : currentLang === 'ar' ? 'ar-EG' : 'en-US';
+    utterance.volume = currentVolume;
+    window.speechSynthesis.speak(utterance);
+  };
+
   // Establish SSE stream subscription
   useEffect(() => {
     let sse: EventSource | null = null;
@@ -107,9 +200,41 @@ export default function App() {
             const alert: ActiveAlert = payload.data;
             console.log('New alert received:', alert);
 
-            // 1. Audio siren synthesis
-            if (soundEnabled) {
-              playIsraeliSiren();
+            // 1. Audio siren synthesis & TTS playback
+            const currentSoundMode = soundModeRef.current;
+            const currentSubscribed = subscribedZonesRef.current;
+            const currentCities = citiesRef.current;
+            
+            let isTargeted = currentSoundMode === 'all';
+            if (currentSoundMode === 'custom' && currentSubscribed.length > 0) {
+              isTargeted = alert.locations.some(loc => {
+                const cleaned = loc.split(' - ')[0].trim();
+                const cityMatch = currentCities.find(c => 
+                  c.name === cleaned || 
+                  c.value === cleaned || 
+                  loc.includes(c.name)
+                );
+                if (!cityMatch) return false;
+                
+                return currentSubscribed.some(sub => {
+                  if (sub.type === 'city') {
+                    return sub.value === cityMatch.name;
+                  } else if (sub.type === 'zone') {
+                    return sub.value === cityMatch.zone;
+                  }
+                  return false;
+                });
+              });
+            }
+
+            if (isTargeted) {
+              playIsraeliSiren(volumeRef.current);
+              
+              if (ttsEnabledRef.current) {
+                setTimeout(() => {
+                  playTTSAlert(alert.locations);
+                }, 800);
+              }
             }
 
             // 2. HTML5 desktop push notifications
@@ -152,7 +277,7 @@ export default function App() {
       sse?.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
-  }, [soundEnabled, lang, cities]);
+  }, []);
 
   return (
     <div className="app-container">
@@ -198,6 +323,15 @@ export default function App() {
           >
             <BarChart2 size={16} />
             {t('tabStats', lang)}
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('heatmap')} 
+            className={activeTab === 'heatmap' ? 'primary' : ''}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+          >
+            <Globe size={16} />
+            {t('tabHeatmap', lang)}
           </button>
         </div>
 
@@ -326,10 +460,28 @@ export default function App() {
             <AlertStats lang={lang} cities={cities} />
           </div>
         )}
+
+        {activeTab === 'heatmap' && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <AlertHeatmap lang={lang} cities={cities} theme={theme} />
+          </div>
+        )}
       </main>
 
       {/* BOTTOM DIAGNOSTICS BAR */}
-      <StatusCard isConnected={isConnected} lang={lang} />
+      <StatusCard 
+        isConnected={isConnected} 
+        lang={lang} 
+        cities={cities}
+        soundMode={soundMode}
+        setSoundMode={setSoundMode}
+        volume={volume}
+        setVolume={setVolume}
+        ttsEnabled={ttsEnabled}
+        setTtsEnabled={setTtsEnabled}
+        subscribedZones={subscribedZones}
+        setSubscribedZones={setSubscribedZones}
+      />
 
     </div>
   );

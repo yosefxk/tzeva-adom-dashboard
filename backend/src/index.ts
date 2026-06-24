@@ -210,6 +210,46 @@ app.get('/api/alerts/history', async (req, res) => {
   }
 });
 
+// Heatmap endpoint to fetch siren counts per city in a timeframe
+app.get('/api/alerts/heatmap', async (req, res) => {
+  try {
+    const startTimestamp = req.query.startTimestamp ? parseInt(req.query.startTimestamp as string, 10) : null;
+    const endTimestamp = req.query.endTimestamp ? parseInt(req.query.endTimestamp as string, 10) : null;
+
+    const filters = [];
+    if (startTimestamp !== null && !isNaN(startTimestamp)) {
+      filters.push(sql`${alerts.timestamp} >= ${startTimestamp}`);
+    }
+    if (endTimestamp !== null && !isNaN(endTimestamp)) {
+      filters.push(sql`${alerts.timestamp} <= ${endTimestamp}`);
+    }
+
+    const whereClause = filters.length > 0 ? and(...filters) : undefined;
+
+    const dbAlerts = await db.select({ locations: alerts.locations })
+      .from(alerts)
+      .where(whereClause);
+
+    const cityCounts: { [key: string]: number } = {};
+    dbAlerts.forEach((row: any) => {
+      let locations: string[] = [];
+      try {
+        locations = JSON.parse(row.locations);
+      } catch {
+        locations = [row.locations];
+      }
+      locations.forEach(loc => {
+        const cleaned = loc.split(' - ')[0].trim();
+        cityCounts[cleaned] = (cityCounts[cleaned] || 0) + 1;
+      });
+    });
+
+    res.json(cityCounts);
+  } catch (err: any) {
+    res.status(500).json({ error: `Failed to fetch heatmap data: ${err.message}` });
+  }
+});
+
 // Aggregate Statistics Widget API with Filtering
 app.get('/api/alerts/stats', async (req, res) => {
   try {

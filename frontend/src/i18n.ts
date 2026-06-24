@@ -110,6 +110,24 @@ export const TRANSLATIONS: Record<string, Record<Language, string>> = {
   legendRocket: { en: 'Rocket / Missile Alarm', he: 'אזעקת ירי רקטות וטילים', ar: 'إنذار إطلاق صواريخ' },
   legendDrone: { en: 'UAV / Aircraft Intrusion', he: 'חדירת כלי טיס עוין', ar: 'تسلل طائرة معادية' },
   activeDangerZone: { en: 'Active Danger Zone', he: 'אזור סכנה פעיל', ar: 'منطقة خطر نشطة' },
+  
+  // Custom alert settings & Heatmap
+  tabHeatmap: { en: 'Threat Heatmap', he: 'מפת חום', ar: 'خريطة حرارية' },
+  soundMode: { en: 'Alert Sound Mode', he: 'מצב צליל התרעה', ar: 'وضع صوت الإنذار' },
+  soundNone: { en: 'No Alerts (Muted)', he: 'ללא צליל (מושתק)', ar: 'بدون صوت (مكتوم)' },
+  soundAll: { en: 'All Alerts', he: 'כל ההתרעות', ar: 'جميع الإنذارات' },
+  soundCustom: { en: 'Zones of Interest', he: 'אזורי עניין', ar: 'المناطق המحددة' },
+  volume: { en: 'Volume', he: 'עוצמת שמע', ar: 'مستوى الصوت' },
+  enableTts: { en: 'Voice Announcer (TTS)', he: 'הקראת שמות יישובים (TTS)', ar: 'قارئ الأسماء صوتياً (TTS)' },
+  searchPlaceholder: { en: 'Search zones or cities...', he: 'חפש אזורים או יישובים...', ar: 'البحث عن مناطق أو مدن...' },
+  heatmapTitle: { en: 'Historical Siren Heatmap', he: 'מפת חום של אזעקות', ar: 'الخريطة الحرارية للإنذارات' },
+  heatmapSelectRange: { en: 'Select Timeframe', he: 'בחר טווח זמן', ar: 'اختر النطاق الزمني' },
+  presetDay: { en: 'Last 24 Hours', he: '24 שעות אחרונות', ar: 'آخر ٢٤ ساعة' },
+  presetWeek: { en: 'Last 7 Days', he: 'שבוע אחרון', ar: 'آخر ٧ أيام' },
+  presetMonth: { en: 'Last 30 Days', he: '30 ימים אחרונים', ar: 'آخر ٣٠ يوم' },
+  presetYear: { en: 'Last Year', he: 'שנה אחרונה', ar: 'آخر عام' },
+  presetCustom: { en: 'Custom Range', he: 'טווח מותאם אישית', ar: 'نطاق مخصص' },
+  sirenCount: { en: 'Sirens', he: 'אזעקות', ar: 'إنذاراً' }
 };
 
 export const THREAT_TRANSLATIONS: Record<number, { title: Record<Language, string>; desc: Record<Language, string> }> = {

@@ -560,3 +560,236 @@ button.primary:hover {
 .pulse {
   animation: pulse 2s ease-in-out infinite;
 }
+
+/* ─── Settings Controls (Slider, Toggle, Dropdowns) ─── */
+.settings-grid {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-top: 15px;
+  border-top: 1px solid var(--border-glass);
+  padding-top: 15px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 180px;
+}
+
+.settings-group label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.settings-select {
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.settings-select:focus {
+  border-color: var(--border-glass-focus);
+  background: var(--bg-input-focus);
+}
+
+.volume-control-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.volume-slider {
+  -webkit-appearance: none;
+  width: 120px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border-glass);
+  outline: none;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-red);
+  box-shadow: var(--glow-red);
+  transition: transform 0.1s;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Custom Searchable MultiSelect */
+.searchable-multiselect {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+}
+
+.multiselect-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.multiselect-search-input:focus {
+  border-color: var(--border-glass-focus);
+  background: var(--bg-input-focus);
+}
+
+.multiselect-dropdown {
+  position: absolute;
+  bottom: 105%; /* Position above because diagnostics bar is at the bottom of the screen! */
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-glass-focus);
+  border-radius: 8px;
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+  z-index: 500;
+}
+
+.multiselect-group-header {
+  padding: 6px 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.multiselect-item {
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  color: var(--text-primary);
+}
+
+.multiselect-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.multiselect-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  max-height: 80px;
+  overflow-y: auto;
+  max-width: 320px;
+  padding: 2px;
+}
+
+.multiselect-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  font-size: 0.72rem;
+  color: var(--text-primary);
+}
+
+.multiselect-chip-remove {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1px;
+}
+
+.multiselect-chip-remove:hover {
+  color: var(--accent-red);
+}
+
+/* Heatmap Date Controls */
+.heatmap-filters {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.heatmap-presets {
+  display: flex;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border-glass);
+}
+
+.heatmap-preset-btn {
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.heatmap-preset-btn:hover {
+  color: var(--text-primary);
+}
+
+.heatmap-preset-btn.active {
+  background: var(--accent-red);
+  color: #fff;
+  box-shadow: var(--glow-red);
+}
+
+.heatmap-custom-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.heatmap-date-input {
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-glass);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  outline: none;
+}
+
+.heatmap-date-input:focus {
+  border-color: var(--border-glass-focus);
+}
