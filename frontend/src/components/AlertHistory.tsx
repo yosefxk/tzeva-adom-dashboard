@@ -296,12 +296,12 @@ export default function AlertHistory({ lang, cities }: AlertHistoryProps) {
               ) : (
                 <>
                   <th style={{ padding: '12px 8px' }}>{t('colLocation', lang)}</th>
-                  <th style={{ padding: '12px 8px' }}>{t('colLocationHe', lang)}</th>
+                  <th className="desktop-only" style={{ padding: '12px 8px' }}>{t('colLocationHe', lang)}</th>
                 </>
               )}
-              <th style={{ padding: '12px 8px' }}>{t('colZone', lang)}</th>
-              <th style={{ padding: '12px 8px', textAlign: 'center' }}>{t('colCountdown', lang)}</th>
-              <th style={{ padding: '12px 8px', textAlign: 'center' }}>{t('colClass', lang)}</th>
+              <th className="desktop-only" style={{ padding: '12px 8px' }}>{t('colZone', lang)}</th>
+              <th className="desktop-only" style={{ padding: '12px 8px', textAlign: 'center' }}>{t('colCountdown', lang)}</th>
+              <th className="desktop-only" style={{ padding: '12px 8px', textAlign: 'center' }}>{t('colClass', lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -362,18 +362,18 @@ export default function AlertHistory({ lang, cities }: AlertHistoryProps) {
                         <td style={{ padding: '14px 8px', color: 'var(--text-primary)', fontWeight: '500' }}>
                           {resolvedCities}
                         </td>
-                        <td className="hebrew" style={{ padding: '14px 8px', fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+                        <td className="hebrew desktop-only" style={{ padding: '14px 8px', fontSize: '0.95rem', color: 'var(--text-muted)' }}>
                           {item.locations.join(', ')}
                         </td>
                       </>
                     )}
-                    <td style={{ padding: '14px 8px', color: 'var(--text-secondary)' }}>
+                    <td className="desktop-only" style={{ padding: '14px 8px', color: 'var(--text-secondary)' }}>
                       {resolvedZones}
                     </td>
-                    <td style={{ padding: '14px 8px', textAlign: 'center', fontWeight: 'bold', color: '#ffea00' }}>
+                    <td className="desktop-only" style={{ padding: '14px 8px', textAlign: 'center', fontWeight: 'bold', color: '#ffea00' }}>
                       {item.countdown}s
                     </td>
-                    <td style={{ padding: '14px 8px', textAlign: 'center' }}>
+                    <td className="desktop-only" style={{ padding: '14px 8px', textAlign: 'center' }}>
                       <span 
                         style={{ 
                           padding: '3px 8px', 

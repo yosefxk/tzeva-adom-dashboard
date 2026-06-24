@@ -127,7 +127,9 @@ export const TRANSLATIONS: Record<string, Record<Language, string>> = {
   presetMonth: { en: 'Last 30 Days', he: '30 ימים אחרונים', ar: 'آخر ٣٠ يوم' },
   presetYear: { en: 'Last Year', he: 'שנה אחרונה', ar: 'آخر عام' },
   presetCustom: { en: 'Custom Range', he: 'טווח מותאם אישית', ar: 'نطاق مخصص' },
-  sirenCount: { en: 'Sirens', he: 'אזעקות', ar: 'إنذاراً' }
+  sirenCount: { en: 'Sirens', he: 'אזעקות', ar: 'إنذاراً' },
+  tabFeed: { en: 'Alerts Feed', he: 'יומן לייב', ar: 'الأحداث המباشرة' },
+  settingsTitle: { en: 'Warning Settings', he: 'הגדרות התרעות', ar: 'إعدادات התنبيهات' }
 };
 
 export const THREAT_TRANSLATIONS: Record<number, { title: Record<Language, string>; desc: Record<Language, string> }> = {

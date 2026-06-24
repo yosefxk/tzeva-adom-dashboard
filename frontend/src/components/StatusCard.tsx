@@ -27,6 +27,8 @@ interface StatusCardProps {
   
   subscribedZones: any[];
   setSubscribedZones: (zones: any[]) => void;
+  
+  forceExpanded?: boolean;
 }
 
 // Play the real Israeli air raid siren (צפירה) using the siren.mp3 static asset
@@ -64,12 +66,15 @@ export default function StatusCard({
   ttsEnabled,
   setTtsEnabled,
   subscribedZones,
-  setSubscribedZones
+  setSubscribedZones,
+  forceExpanded = false
 }: StatusCardProps) {
   const [status, setStatus] = useState<StatusState | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [sirenPlaying, setSirenPlaying] = useState(false);
+  
+  const isCurrentlyExpanded = expanded || forceExpanded;
   
   // Custom multiselect search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -154,33 +159,35 @@ export default function StatusCard({
 
   return (
     <div className="diagnostics-bar">
-      {/* Collapsed summary bar — always visible */}
-      <button 
-        className="diagnostics-toggle"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="diagnostics-summary">
-          <Activity size={14} style={{ opacity: 0.7 }} />
-          <span className="diagnostics-label">{t('diagnosticsTitle', lang)}</span>
-          
-          {/* Compact inline status indicators */}
-          <span className="diagnostics-inline-status">
-            <span 
-              className={`diagnostics-dot ${isConnected ? 'green' : 'red'}`} 
-              title={isConnected ? 'SSE Connected' : 'SSE Disconnected'}
-            />
-            <span 
-              className={`diagnostics-dot ${status ? 'green' : 'red'}`} 
-              title={status ? 'API Online' : 'API Offline'}
-            />
-            {status && <span className="diagnostics-latency" dir="ltr">{status.latency}ms</span>}
-          </span>
-        </div>
-        {expanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-      </button>
+      {/* Collapsed summary bar — always visible (hidden if forced expanded on mobile) */}
+      {!forceExpanded && (
+        <button 
+          className="diagnostics-toggle"
+          onClick={() => setExpanded(!expanded)}
+        >
+          <div className="diagnostics-summary">
+            <Activity size={14} style={{ opacity: 0.7 }} />
+            <span className="diagnostics-label">{t('diagnosticsTitle', lang)}</span>
+            
+            {/* Compact inline status indicators */}
+            <span className="diagnostics-inline-status">
+              <span 
+                className={`diagnostics-dot ${isConnected ? 'green' : 'red'}`} 
+                title={isConnected ? 'SSE Connected' : 'SSE Disconnected'}
+              />
+              <span 
+                className={`diagnostics-dot ${status ? 'green' : 'red'}`} 
+                title={status ? 'API Online' : 'API Offline'}
+              />
+              {status && <span className="diagnostics-latency" dir="ltr">{status.latency}ms</span>}
+            </span>
+          </div>
+          {expanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+        </button>
+      )}
 
       {/* Expanded diagnostics panel */}
-      {expanded && (
+      {isCurrentlyExpanded && (
         <div className="diagnostics-expanded">
           <div className="diagnostics-grid">
             

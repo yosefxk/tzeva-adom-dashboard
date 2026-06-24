@@ -60,7 +60,7 @@ export default function LiveFeed({ alerts, soundEnabled, setSoundEnabled, lang, 
       </div>
 
       {/* Scrolling Alerts Box */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '420px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {alerts.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '200px', color: 'var(--text-muted)', gap: '10px' }}>
             <Zap size={24} style={{ opacity: 0.5 }} />

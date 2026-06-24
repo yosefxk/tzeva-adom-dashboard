@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { ShieldAlert, Map, History, BarChart2, Bell, Sun, Moon, Globe } from 'lucide-react';
+import { ShieldAlert, Map, History, BarChart2, Bell, Sun, Moon, Globe, Settings } from 'lucide-react';
 import AlertMap from './components/AlertMap';
 import AlertHistory from './components/AlertHistory';
 import AlertStats from './components/AlertStats';
@@ -83,7 +83,23 @@ export default function App() {
   }, [subscribedZones]);
 
   const [isConnected, setIsConnected] = useState(false);
-  const [activeTab, setActiveTab] = useState<'map' | 'history' | 'stats' | 'heatmap'>('map');
+  const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'history' | 'stats' | 'heatmap'>(() => {
+    return window.innerWidth <= 1024 ? 'feed' : 'map';
+  });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 1024;
+      setIsMobile(mobile);
+      if (!mobile && activeTab === 'feed') {
+        setActiveTab('map');
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [activeTab]);
 
   // Multi-Language State
   const [lang, setLang] = useState<Language>('en');
@@ -292,12 +308,12 @@ export default function App() {
             <h1 className={lang === 'he' ? 'hebrew' : lang === 'ar' ? 'arabic' : ''} style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: lang === 'en' ? '0.5px' : '0' }}>
               {t('appTitle', lang)} <span style={{ color: 'var(--accent-red)', fontWeight: 'bold' }}>{t('appLive', lang)}</span>
             </h1>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t('appSubtitle', lang)}</p>
+            <p className="desktop-only" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t('appSubtitle', lang)}</p>
           </div>
         </div>
 
         {/* Tab switcher navigation bar */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="desktop-only" style={{ display: 'flex', gap: '8px' }}>
           <button 
             onClick={() => setActiveTab('map')} 
             className={activeTab === 'map' ? 'primary' : ''}
@@ -337,6 +353,26 @@ export default function App() {
 
         {/* Settings, Language, & Notifications */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Settings Gear (Mobile Only) */}
+          {isMobile && (
+            <button
+              onClick={() => setSettingsOpen(true)}
+              style={{
+                padding: '6px 10px',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid var(--border-glass)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title={t('settingsTitle', lang)}
+            >
+              <Settings size={16} />
+            </button>
+          )}
+
           {/* Theme Toggle Button */}
           <button
             onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
@@ -355,7 +391,9 @@ export default function App() {
             title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
           >
             {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
-            {theme === 'light' ? t('themeDark', lang) : t('themeLight', lang)}
+            <span className="desktop-only">
+              {theme === 'light' ? t('themeDark', lang) : t('themeLight', lang)}
+            </span>
           </button>
 
           {/* Language Selector Dropdown */}
@@ -392,26 +430,43 @@ export default function App() {
               color: 'var(--text-secondary)',
               cursor: 'pointer'
             }}
+            title={Notification.permission === 'granted' ? t('notificationsEnabled', lang) : t('enableNotifications', lang)}
           >
             <Bell size={14} style={{ color: Notification.permission === 'granted' ? 'var(--accent-green)' : 'var(--text-muted)' }} />
-            {Notification.permission === 'granted' ? t('notificationsEnabled', lang) : t('enableNotifications', lang)}
+            <span className="desktop-only">
+              {Notification.permission === 'granted' ? t('notificationsEnabled', lang) : t('enableNotifications', lang)}
+            </span>
           </span>
         </div>
       </header>
 
       {/* SIDEBAR PANEL */}
-      <aside className="app-sidebar">
-        <LiveFeed 
-          alerts={sessionAlerts} 
-          soundEnabled={soundEnabled} 
-          setSoundEnabled={setSoundEnabled} 
-          lang={lang}
-          cities={cities}
-        />
-      </aside>
+      {!isMobile && (
+        <aside className="app-sidebar">
+          <LiveFeed 
+            alerts={sessionAlerts} 
+            soundEnabled={soundEnabled} 
+            setSoundEnabled={setSoundEnabled} 
+            lang={lang}
+            cities={cities}
+          />
+        </aside>
+      )}
 
       {/* MAIN CONTENT VIEW WINDOW */}
       <main className="app-main">
+        {activeTab === 'feed' && isMobile && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', flex: 1, minHeight: 0 }}>
+            <LiveFeed 
+              alerts={sessionAlerts} 
+              soundEnabled={soundEnabled} 
+              setSoundEnabled={setSoundEnabled} 
+              lang={lang}
+              cities={cities}
+            />
+          </div>
+        )}
+
         {activeTab === 'map' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', flex: 1, minHeight: 0 }}>
             <div className="glass-panel" style={{ padding: '8px', overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -469,19 +524,92 @@ export default function App() {
       </main>
 
       {/* BOTTOM DIAGNOSTICS BAR */}
-      <StatusCard 
-        isConnected={isConnected} 
-        lang={lang} 
-        cities={cities}
-        soundMode={soundMode}
-        setSoundMode={setSoundMode}
-        volume={volume}
-        setVolume={setVolume}
-        ttsEnabled={ttsEnabled}
-        setTtsEnabled={setTtsEnabled}
-        subscribedZones={subscribedZones}
-        setSubscribedZones={setSubscribedZones}
-      />
+      {!isMobile && (
+        <StatusCard 
+          isConnected={isConnected} 
+          lang={lang} 
+          cities={cities}
+          soundMode={soundMode}
+          setSoundMode={setSoundMode}
+          volume={volume}
+          setVolume={setVolume}
+          ttsEnabled={ttsEnabled}
+          setTtsEnabled={setTtsEnabled}
+          subscribedZones={subscribedZones}
+          setSubscribedZones={setSubscribedZones}
+        />
+      )}
+
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      {isMobile && (
+        <nav className="mobile-bottom-nav">
+          <button 
+            className={`bottom-nav-item ${activeTab === 'feed' ? 'active' : ''}`}
+            onClick={() => setActiveTab('feed')}
+          >
+            <Bell size={20} />
+            <span>{t('tabFeed', lang)}</span>
+          </button>
+          <button 
+            className={`bottom-nav-item ${activeTab === 'map' ? 'active' : ''}`}
+            onClick={() => setActiveTab('map')}
+          >
+            <Map size={20} />
+            <span>{t('tabRadar', lang)}</span>
+          </button>
+          <button 
+            className={`bottom-nav-item ${activeTab === 'heatmap' ? 'active' : ''}`}
+            onClick={() => setActiveTab('heatmap')}
+          >
+            <Globe size={20} />
+            <span>{t('tabHeatmap', lang)}</span>
+          </button>
+          <button 
+            className={`bottom-nav-item ${activeTab === 'history' ? 'active' : ''}`}
+            onClick={() => setActiveTab('history')}
+          >
+            <History size={20} />
+            <span>{t('tabLogs', lang)}</span>
+          </button>
+          <button 
+            className={`bottom-nav-item ${activeTab === 'stats' ? 'active' : ''}`}
+            onClick={() => setActiveTab('stats')}
+          >
+            <BarChart2 size={20} />
+            <span>{t('tabStats', lang)}</span>
+          </button>
+        </nav>
+      )}
+
+      {/* MOBILE SETTINGS DRAWER */}
+      {isMobile && settingsOpen && (
+        <div className="settings-drawer-backdrop" onClick={() => setSettingsOpen(false)}>
+          <div className="settings-drawer-content" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-drawer-header">
+              <h3 className={lang === 'he' ? 'hebrew' : lang === 'ar' ? 'arabic' : ''}>
+                {t('settingsTitle', lang)}
+              </h3>
+              <button className="settings-drawer-close" onClick={() => setSettingsOpen(false)}>
+                &times;
+              </button>
+            </div>
+            <StatusCard 
+              isConnected={isConnected} 
+              lang={lang} 
+              cities={cities}
+              soundMode={soundMode}
+              setSoundMode={setSoundMode}
+              volume={volume}
+              setVolume={setVolume}
+              ttsEnabled={ttsEnabled}
+              setTtsEnabled={setTtsEnabled}
+              subscribedZones={subscribedZones}
+              setSubscribedZones={setSubscribedZones}
+              forceExpanded={true}
+            />
+          </div>
+        </div>
+      )}
 
     </div>
   );
