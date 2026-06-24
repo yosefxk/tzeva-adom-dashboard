@@ -97,7 +97,7 @@ export default function AlertMap({ activeAlerts, lang, cities, theme }: AlertMap
   };
 
   return (
-    <div style={{ height: '550px', width: '100%', position: 'relative' }}>
+    <div style={{ height: '100%', width: '100%', position: 'relative', flex: 1, minHeight: 0 }}>
       <MapContainer
         center={[ISRAEL_CENTER.lat, ISRAEL_CENTER.lng]}
         zoom={8}

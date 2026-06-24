@@ -279,8 +279,8 @@ export default function App() {
       {/* MAIN CONTENT VIEW WINDOW */}
       <main className="app-main">
         {activeTab === 'map' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div className="glass-panel" style={{ padding: '8px', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', flex: 1, minHeight: 0 }}>
+            <div className="glass-panel" style={{ padding: '8px', overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <AlertMap activeAlerts={activeAlerts} lang={lang} cities={cities} theme={theme} />
             </div>
             
@@ -293,7 +293,8 @@ export default function App() {
                   background: 'rgba(255,51,75,0.03)',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  flexShrink: 0
                 }}
               >
                 <div>
@@ -314,9 +315,17 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'history' && <AlertHistory lang={lang} cities={cities} />}
+        {activeTab === 'history' && (
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <AlertHistory lang={lang} cities={cities} />
+          </div>
+        )}
 
-        {activeTab === 'stats' && <AlertStats lang={lang} cities={cities} />}
+        {activeTab === 'stats' && (
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <AlertStats lang={lang} cities={cities} />
+          </div>
+        )}
       </main>
 
       {/* BOTTOM DIAGNOSTICS BAR */}
