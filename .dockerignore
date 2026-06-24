@@ -1,0 +1,24 @@
+# Ignore node_modules in both root, backend and frontend
+**/node_modules
+node_modules/
+
+# Ignore compiled/build outputs
+**/dist
+dist/
+
+# Ignore git metadata
+.git
+.gitignore
+.github
+
+# Ignore SQLite databases and logs
+backend/data/*.db
+backend/data/*.db-journal
+backend/data/*.db-shm
+backend/data/*.db-wal
+*.db
+*.db-journal
+
+# Ignore local system files
+.DS_Store
+Thumbs.db

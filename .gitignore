@@ -1,0 +1,37 @@
+# Node dependency directories
+node_modules/
+**/node_modules/
+
+# Local databases and SQLite files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+backend/database/
+database/
+alert_radar_data/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

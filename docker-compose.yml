@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  tzeva-adom-radar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tzeva-adom-radar
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - NODE_ENV=production
+    volumes:
+      - alert_radar_data:/app/database
+
+volumes:
+  alert_radar_data:
+    driver: local
