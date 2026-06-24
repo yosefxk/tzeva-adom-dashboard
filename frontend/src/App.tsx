@@ -31,8 +31,41 @@ interface ActiveAlert {
 
 export default function App() {
   // Multi-Language State (declared early to be accessible by downstream filter methods)
-  const [lang, setLang] = useState<Language>('en');
+  const [lang, setLang] = useState<Language>(() => {
+    const path = window.location.pathname;
+    const pathLang = path.split('/')[1];
+    if (pathLang === 'he' || pathLang === 'en' || pathLang === 'ar') {
+      return pathLang as Language;
+    }
+    const saved = localStorage.getItem('language');
+    if (saved === 'he' || saved === 'en' || saved === 'ar') {
+      return saved as Language;
+    }
+    return 'he';
+  });
   const [cities, setCities] = useState<any[]>([]);
+
+  // Sync language selection to URL path segment and localStorage
+  useEffect(() => {
+    localStorage.setItem('language', lang);
+    const expectedPath = '/' + lang;
+    if (window.location.pathname !== expectedPath) {
+      window.history.pushState(null, '', expectedPath);
+    }
+  }, [lang]);
+
+  // Handle back/forward navigation popstate events
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      const pathLang = path.split('/')[1];
+      if (pathLang === 'he' || pathLang === 'en' || pathLang === 'ar') {
+        setLang(pathLang as Language);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>([]);
   const [sessionAlerts, setSessionAlerts] = useState<ActiveAlert[]>([]);
