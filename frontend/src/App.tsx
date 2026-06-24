@@ -374,12 +374,12 @@ export default function App() {
       
       {/* HEADER SECTION */}
       <header className="app-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ padding: '8px', background: 'rgba(255,51,75,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ShieldAlert size={24} style={{ color: 'var(--accent-red)' }} />
+        <div className="app-header-brand">
+          <div className="app-header-logo">
+            <ShieldAlert style={{ color: 'var(--accent-red)' }} />
           </div>
           <div>
-            <h1 className={lang === 'he' ? 'hebrew' : lang === 'ar' ? 'arabic' : ''} style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: lang === 'en' ? '0.5px' : '0' }}>
+            <h1 className={`${lang === 'he' ? 'hebrew' : lang === 'ar' ? 'arabic' : ''} app-header-title`} style={{ letterSpacing: lang === 'en' ? '0.5px' : '0' }}>
               {t('appTitle', lang)} <span style={{ color: 'var(--accent-red)', fontWeight: 'bold' }}>{t('appLive', lang)}</span>
             </h1>
             <p className="desktop-only" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t('appSubtitle', lang)}</p>
@@ -447,70 +447,76 @@ export default function App() {
             </button>
           )}
 
-          {/* Theme Toggle Button */}
-          <button
-            onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
-            style={{
-              padding: '6px 10px',
-              fontSize: '0.8rem',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid var(--border-glass)',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontWeight: 600
-            }}
-            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-          >
-            {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
-            <span className="desktop-only">
-              {theme === 'light' ? t('themeDark', lang) : t('themeLight', lang)}
-            </span>
-          </button>
+          {/* Theme Toggle Button (Desktop only) */}
+          {!isMobile && (
+            <button
+              onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+              style={{
+                padding: '6px 10px',
+                fontSize: '0.8rem',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid var(--border-glass)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 600
+              }}
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            >
+              {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+              <span className="desktop-only">
+                {theme === 'light' ? t('themeDark', lang) : t('themeLight', lang)}
+              </span>
+            </button>
+          )}
 
-          {/* Language Selector Dropdown */}
-          <select 
-            value={lang} 
-            onChange={(e) => setLang(e.target.value as Language)}
-            style={{ 
-              padding: '6px 10px', 
-              fontSize: '0.8rem', 
-              background: 'rgba(255,255,255,0.05)', 
-              border: '1px solid var(--border-glass)', 
-              borderRadius: '6px', 
-              cursor: 'pointer',
-              fontWeight: 600
-            }}
-          >
-            <option value="en">English</option>
-            <option value="he">עברית</option>
-            <option value="ar">العربية</option>
-          </select>
+          {/* Language Selector Dropdown (Desktop only) */}
+          {!isMobile && (
+            <select 
+              value={lang} 
+              onChange={(e) => setLang(e.target.value as Language)}
+              style={{ 
+                padding: '6px 10px', 
+                fontSize: '0.8rem', 
+                background: 'rgba(255,255,255,0.05)', 
+                border: '1px solid var(--border-glass)', 
+                borderRadius: '6px', 
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              <option value="en">English</option>
+              <option value="he">עברית</option>
+              <option value="ar">العربية</option>
+            </select>
+          )}
 
-          {/* Browser Notification Switcher */}
-          <span 
-            onClick={() => {
-              if (Notification.permission === 'default') {
-                Notification.requestPermission();
-              }
-            }}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px', 
-              fontSize: '0.8rem', 
-              color: 'var(--text-secondary)',
-              cursor: 'pointer'
-            }}
-            title={Notification.permission === 'granted' ? t('notificationsEnabled', lang) : t('enableNotifications', lang)}
-          >
-            <Bell size={14} style={{ color: Notification.permission === 'granted' ? 'var(--accent-green)' : 'var(--text-muted)' }} />
-            <span className="desktop-only">
-              {Notification.permission === 'granted' ? t('notificationsEnabled', lang) : t('enableNotifications', lang)}
+          {/* Browser Notification Switcher (Desktop only) */}
+          {!isMobile && (
+            <span 
+              onClick={() => {
+                if (Notification.permission === 'default') {
+                  Notification.requestPermission();
+                }
+              }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                fontSize: '0.8rem', 
+                color: 'var(--text-secondary)',
+                cursor: 'pointer'
+              }}
+              title={Notification.permission === 'granted' ? t('notificationsEnabled', lang) : t('enableNotifications', lang)}
+            >
+              <Bell size={14} style={{ color: Notification.permission === 'granted' ? 'var(--accent-green)' : 'var(--text-muted)' }} />
+              <span className="desktop-only">
+                {Notification.permission === 'granted' ? t('notificationsEnabled', lang) : t('enableNotifications', lang)}
+              </span>
             </span>
-          </span>
+          )}
         </div>
       </header>
 
@@ -793,6 +799,86 @@ export default function App() {
                   {t('enableTts', lang)}
                 </label>
               </div>
+
+              {/* App Preferences Section (Mobile Only to avoid layout overflow in header) */}
+              {isMobile && (
+                <div style={{ marginTop: '20px', borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>
+                  <h4 style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                    {lang === 'he' ? 'העדפות אפליקציה' : lang === 'ar' ? 'تفضيلات التطبيق' : 'App Preferences'}
+                  </h4>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {/* Language Selector */}
+                    <div className="modal-setting-group">
+                      <label>{lang === 'he' ? 'שפה' : lang === 'ar' ? 'اللغة' : 'Language'}</label>
+                      <select 
+                        value={lang} 
+                        onChange={(e) => setLang(e.target.value as Language)}
+                        className="modal-select"
+                      >
+                        <option value="en">English</option>
+                        <option value="he">עברית</option>
+                        <option value="ar">العربية</option>
+                      </select>
+                    </div>
+
+                    {/* Theme Toggle */}
+                    <div className="modal-setting-group">
+                      <label>{lang === 'he' ? 'מצב תצוגה' : lang === 'ar' ? 'מظهر השاشة' : 'Appearance Theme'}</label>
+                      <button
+                        onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          fontSize: '0.85rem',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          fontWeight: 600
+                        }}
+                      >
+                        {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+                        {theme === 'light' ? t('themeDark', lang) : t('themeLight', lang)}
+                      </button>
+                    </div>
+
+                    {/* Browser Notifications Switch */}
+                    <div className="modal-setting-group">
+                      <label>{lang === 'he' ? 'התראות דפדפן' : lang === 'ar' ? 'إشعارات المتصفح' : 'Browser Notifications'}</label>
+                      <button
+                        onClick={() => {
+                          if (Notification.permission === 'default') {
+                            Notification.requestPermission();
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          fontSize: '0.85rem',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          fontWeight: 600,
+                          color: Notification.permission === 'granted' ? 'var(--accent-green)' : 'var(--text-secondary)'
+                        }}
+                      >
+                        <Bell size={14} style={{ color: Notification.permission === 'granted' ? 'var(--accent-green)' : 'var(--text-muted)' }} />
+                        {Notification.permission === 'granted' ? t('notificationsEnabled', lang) : t('enableNotifications', lang)}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Action buttons */}
