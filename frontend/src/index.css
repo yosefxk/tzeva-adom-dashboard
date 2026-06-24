@@ -343,7 +343,9 @@ button.primary:hover {
   background: var(--bg-header);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  z-index: 90;
+  z-index: 100;
+  position: relative;
+  overflow: visible;
 }
 
 .diagnostics-toggle {
@@ -416,6 +418,8 @@ button.primary:hover {
   padding: 12px 20px 14px;
   border-top: 1px solid var(--border-glass);
   animation: slideUp 0.2s ease-out;
+  overflow: visible;
+  position: relative;
 }
 
 @keyframes slideUp {
@@ -509,23 +513,21 @@ button.primary:hover {
   visibility: hidden;
   opacity: 0;
   position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(10, 11, 16, 0.95);
+  bottom: calc(100% + 10px);
+  left: 0;
+  background: rgba(10, 11, 16, 0.97);
   color: var(--text-primary);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  white-space: nowrap;
-  max-width: 300px;
-  white-space: normal;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  width: max-content;
+  max-width: 320px;
   border: 1px solid var(--border-glass-focus);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  z-index: 200;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  z-index: 300;
   pointer-events: none;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
 }
 
 .diagnostics-tooltip-wrapper:hover .diagnostics-tooltip {
