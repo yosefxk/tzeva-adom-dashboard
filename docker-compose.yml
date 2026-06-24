@@ -3,6 +3,7 @@ version: '3.9'
 services:
   backend:
     build: ./backend
+    image: developer-apps-tzeva-adom-backend:latest
     container_name: tzeva-adom-backend
     restart: unless-stopped
     volumes:
@@ -12,6 +13,7 @@ services:
 
   frontend:
     build: ./frontend
+    image: developer-apps-tzeva-adom-frontend:latest
     container_name: tzeva-adom-frontend
     ports:
       - "8082:80"
