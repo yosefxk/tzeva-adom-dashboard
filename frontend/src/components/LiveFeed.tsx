@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Volume2, VolumeX, ShieldAlert, Zap, Clock, Info } from 'lucide-react';
 import { t, translateCity, translateThreat } from '../i18n';
 import type { Language } from '../i18n';
@@ -30,45 +29,7 @@ interface LiveFeedProps {
   cities: any[];
 }
 
-// Programmatic red-alert siren synthesizer using native Web Audio API oscillators
-export function playSyntheticSiren() {
-  try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    
-    osc.type = 'sawtooth';
-    
-    const now = audioCtx.currentTime;
-    osc.frequency.setValueAtTime(440, now);
-    osc.frequency.linearRampToValueAtTime(850, now + 1.2);
-    osc.frequency.linearRampToValueAtTime(440, now + 2.4);
-    osc.frequency.linearRampToValueAtTime(850, now + 3.6);
-    osc.frequency.linearRampToValueAtTime(440, now + 4.8);
-    
-    gainNode.gain.setValueAtTime(0.25, now);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 5.0);
-    
-    osc.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    osc.start(now);
-    osc.stop(now + 5.0);
-  } catch (err) {
-    console.error('Failed to play synthesized alert audio.', err);
-  }
-}
-
 export default function LiveFeed({ alerts, soundEnabled, setSoundEnabled, lang, cities }: LiveFeedProps) {
-  const [sirenPlaying, setSirenPlaying] = useState(false);
-
-  const handleTestSiren = () => {
-    setSirenPlaying(true);
-    playSyntheticSiren();
-    setTimeout(() => {
-      setSirenPlaying(false);
-    }, 5000);
-  };
 
   return (
     <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: '350px' }}>
@@ -94,14 +55,6 @@ export default function LiveFeed({ alerts, soundEnabled, setSoundEnabled, lang, 
           >
             {soundEnabled ? <Volume2 size={14} style={{ color: 'var(--accent-red)' }} /> : <VolumeX size={14} />}
             {soundEnabled ? t('sirenOn', lang) : t('muted', lang)}
-          </button>
-          
-          <button 
-            onClick={handleTestSiren} 
-            disabled={sirenPlaying}
-            style={{ padding: '6px 10px', fontSize: '0.8rem' }}
-          >
-            {sirenPlaying ? t('playingTest', lang) : t('testSiren', lang)}
           </button>
         </div>
       </div>

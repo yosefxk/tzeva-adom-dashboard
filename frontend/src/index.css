@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+Hebrew:wght@300;400;500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Heebo:wght@300;400;500;700;800;900&family=Noto+Sans+Hebrew:wght@300;400;500;700;800&display=swap');
 
 :root {
   color-scheme: dark;
@@ -21,7 +21,7 @@
   --glow-red: 0 0 20px rgba(255, 51, 75, 0.4);
   --glow-orange: 0 0 20px rgba(255, 145, 0, 0.4);
   --font-en: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-he: 'Noto Sans Hebrew', sans-serif;
+  --font-he: 'Heebo', 'Noto Sans Hebrew', sans-serif;
 }
 
 [data-theme="light"] {
@@ -99,10 +99,11 @@ body {
 .app-container {
   display: grid;
   grid-template-columns: 350px 1fr;
-  grid-template-rows: 70px 1fr;
+  grid-template-rows: 70px 1fr auto;
   grid-template-areas:
     "header header"
-    "sidebar main";
+    "sidebar main"
+    "diagnostics diagnostics";
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -111,11 +112,12 @@ body {
 @media (max-width: 1024px) {
   .app-container {
     grid-template-columns: 1fr;
-    grid-template-rows: 70px auto auto;
+    grid-template-rows: 70px auto auto auto;
     grid-template-areas:
       "header"
       "sidebar"
-      "main";
+      "main"
+      "diagnostics";
     height: auto;
     overflow: auto;
   }
@@ -332,4 +334,221 @@ button.primary:hover {
 .alert-item-card:hover {
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Bottom Diagnostics Bar ─── */
+.diagnostics-bar {
+  grid-area: diagnostics;
+  border-top: 1px solid var(--border-glass);
+  background: var(--bg-header);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 90;
+}
+
+.diagnostics-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.diagnostics-toggle:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  border: none;
+}
+
+.diagnostics-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.diagnostics-label {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-size: 0.7rem;
+}
+
+.diagnostics-inline-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-start: 8px;
+  padding-inline-start: 10px;
+  border-inline-start: 1px solid var(--border-glass);
+}
+
+.diagnostics-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.diagnostics-dot.green {
+  background: var(--accent-green);
+  box-shadow: 0 0 6px rgba(0, 230, 118, 0.5);
+}
+
+.diagnostics-dot.red {
+  background: var(--accent-red);
+  box-shadow: 0 0 6px rgba(255, 51, 75, 0.5);
+}
+
+.diagnostics-latency {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.diagnostics-expanded {
+  padding: 12px 20px 14px;
+  border-top: 1px solid var(--border-glass);
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.diagnostics-grid {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.diagnostics-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 120px;
+}
+
+.diagnostics-item-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diagnostics-item-value {
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.diagnostics-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-glass);
+}
+
+.diagnostics-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.diagnostics-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.diagnostics-btn.siren-btn {
+  border-color: rgba(255, 51, 75, 0.3);
+  color: var(--accent-red);
+}
+
+.diagnostics-btn.siren-btn:hover {
+  background: rgba(255, 51, 75, 0.1);
+  border-color: rgba(255, 51, 75, 0.5);
+}
+
+.diagnostics-btn.siren-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Diagnostics Tooltips */
+.diagnostics-tooltip-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.diagnostics-tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 11, 16, 0.95);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  max-width: 300px;
+  white-space: normal;
+  border: 1px solid var(--border-glass-focus);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.diagnostics-tooltip-wrapper:hover .diagnostics-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Spin animation for refresh icon */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Pulse animation for SSE indicator */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
 }

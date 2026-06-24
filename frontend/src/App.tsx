@@ -3,8 +3,8 @@ import { ShieldAlert, Map, History, BarChart2, Bell, Sun, Moon } from 'lucide-re
 import AlertMap from './components/AlertMap';
 import AlertHistory from './components/AlertHistory';
 import AlertStats from './components/AlertStats';
-import LiveFeed, { playSyntheticSiren } from './components/LiveFeed';
-import StatusCard from './components/StatusCard';
+import LiveFeed from './components/LiveFeed';
+import StatusCard, { playIsraeliSiren } from './components/StatusCard';
 import { t, translateCity } from './i18n';
 import type { Language } from './i18n';
 
@@ -109,7 +109,7 @@ export default function App() {
 
             // 1. Audio siren synthesis
             if (soundEnabled) {
-              playSyntheticSiren();
+              playIsraeliSiren();
             }
 
             // 2. HTML5 desktop push notifications
@@ -164,7 +164,7 @@ export default function App() {
             <ShieldAlert size={24} style={{ color: 'var(--accent-red)' }} />
           </div>
           <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '0.5px' }}>
+            <h1 className={lang === 'he' ? 'hebrew' : lang === 'ar' ? 'arabic' : ''} style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: lang === 'en' ? '0.5px' : '0' }}>
               {t('appTitle', lang)} <span style={{ color: 'var(--accent-red)', fontWeight: 'bold' }}>{t('appLive', lang)}</span>
             </h1>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t('appSubtitle', lang)}</p>
@@ -267,8 +267,6 @@ export default function App() {
 
       {/* SIDEBAR PANEL */}
       <aside className="app-sidebar">
-        <StatusCard isConnected={isConnected} lang={lang} />
-        
         <LiveFeed 
           alerts={sessionAlerts} 
           soundEnabled={soundEnabled} 
@@ -320,6 +318,9 @@ export default function App() {
 
         {activeTab === 'stats' && <AlertStats lang={lang} cities={cities} />}
       </main>
+
+      {/* BOTTOM DIAGNOSTICS BAR */}
+      <StatusCard isConnected={isConnected} lang={lang} />
 
     </div>
   );
