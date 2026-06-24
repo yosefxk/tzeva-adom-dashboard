@@ -2,7 +2,7 @@
 
 A high-performance, visually stunning, self-hosted web application for tracking rocket alerts and civil defense warnings in Israel in real-time. Designed to run in a Docker container (perfect for Portainer / Jellymini home servers) with an architecture optimized for maximum resilience.
 
-![Aesthetic Alert Dashboard](https://raw.githubusercontent.com/yaniv-golan/pikud-haoref-alerts/master/references/common-patterns.md) <!-- Example placeholder for visual context -->
+![Aesthetic Alert Dashboard](frontend/src/assets/hero.png)
 
 ---
 
@@ -100,24 +100,36 @@ Every push to the `main` branch automatically triggers a GitHub Action that buil
 To deploy this in Portainer, create a new Stack and paste the following configuration in the **Web Editor**. It pulls the pre-built image automatically:
 
 ```yaml
-version: '3.8'
+version: '3.9'
 
 services:
-  red-alert-radar:
-    image: ghcr.io/yosefxk/red-alert-dashboard:latest
-    container_name: red-alert-radar
+  tzeva-adom-backend:
+    image: ghcr.io/yosefxk/tzeva-adom-backend:latest
+    container_name: tzeva-adom-backend
     restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      - PORT=8080
-      - NODE_ENV=production
     volumes:
       - alert_radar_data:/app/database
+    networks:
+      - media_network
+
+  tzeva-adom-frontend:
+    image: ghcr.io/yosefxk/tzeva-adom-frontend:latest
+    container_name: tzeva-adom-frontend
+    ports:
+      - "8082:80"
+    depends_on:
+      - tzeva-adom-backend
+    restart: unless-stopped
+    networks:
+      - media_network
 
 volumes:
   alert_radar_data:
     driver: local
+
+networks:
+  media_network:
+    external: true
 ```
 
 ### Local Docker Build
