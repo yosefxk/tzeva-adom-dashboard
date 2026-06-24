@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
-import { ShieldAlert, Map, History, BarChart2, Bell, Sun, Moon, Globe, Settings } from 'lucide-react';
+import { ShieldAlert, Map, History, BarChart2, Bell, Sun, Moon, Globe, Settings, Volume2 } from 'lucide-react';
 import AlertMap from './components/AlertMap';
 import AlertHistory from './components/AlertHistory';
 import AlertStats from './components/AlertStats';
 import AlertHeatmap from './components/AlertHeatmap';
 import LiveFeed from './components/LiveFeed';
-import StatusCard, { playIsraeliSiren } from './components/StatusCard';
+import StatusCard from './components/StatusCard';
+import { playIsraeliSiren, playBeepSound } from './utils/sound';
 import { t, translateCity } from './i18n';
 import type { Language } from './i18n';
 
@@ -29,6 +30,10 @@ interface ActiveAlert {
 }
 
 export default function App() {
+  // Multi-Language State (declared early to be accessible by downstream filter methods)
+  const [lang, setLang] = useState<Language>('en');
+  const [cities, setCities] = useState<any[]>([]);
+
   const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>([]);
   const [sessionAlerts, setSessionAlerts] = useState<ActiveAlert[]>([]);
   
@@ -52,19 +57,6 @@ export default function App() {
     }
   });
 
-  const soundEnabled = soundMode !== 'none';
-  const setSoundEnabled = (enabled: boolean) => {
-    if (enabled) {
-      const lastMode = (localStorage.getItem('lastActiveSoundMode') as 'all' | 'custom') || 'all';
-      setSoundMode(lastMode);
-    } else {
-      if (soundMode !== 'none') {
-        localStorage.setItem('lastActiveSoundMode', soundMode);
-      }
-      setSoundMode('none');
-    }
-  };
-
   // Sync settings state to localStorage
   useEffect(() => {
     localStorage.setItem('soundMode', soundMode);
@@ -81,6 +73,13 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('subscribedZones', JSON.stringify(subscribedZones));
   }, [subscribedZones]);
+
+  const [soundType, setSoundType] = useState<'siren' | 'beep' | 'mute'>(() => {
+    return (localStorage.getItem('soundType') as 'siren' | 'beep' | 'mute') || 'siren';
+  });
+  useEffect(() => {
+    localStorage.setItem('soundType', soundType);
+  }, [soundType]);
 
   const [isConnected, setIsConnected] = useState(false);
   const [activeTab, setActiveTab] = useState<'feed' | 'map' | 'history' | 'stats' | 'heatmap'>(() => {
@@ -101,9 +100,75 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, [activeTab]);
 
-  // Multi-Language State
-  const [lang, setLang] = useState<Language>('en');
-  const [cities, setCities] = useState<any[]>([]);
+  // Modal specific search & test siren state variables
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [sirenPlaying, setSirenPlaying] = useState(false);
+
+  // Extract unique HFC zones
+  const uniqueZones = Array.from(new Set(cities.map(c => c.zone).filter(Boolean))).map(zoneHeb => {
+    const match = cities.find(c => c.zone === zoneHeb);
+    return {
+      type: 'zone',
+      id: `zone-${zoneHeb}`,
+      name: zoneHeb,
+      name_en: match?.zone_en || zoneHeb,
+      value: zoneHeb
+    };
+  });
+
+  const cityItems = cities.map(c => ({
+    type: 'city',
+    id: `city-${c.id}`,
+    name: c.name,
+    name_en: c.name_en,
+    value: c.name
+  }));
+
+  const allItems = [...uniqueZones, ...cityItems];
+
+  const filteredItems = searchTerm.trim() === ''
+    ? allItems.slice(0, 100)
+    : allItems.filter(item => {
+        const query = searchTerm.toLowerCase();
+        return (
+          item.name.toLowerCase().includes(query) ||
+          item.name_en.toLowerCase().includes(query)
+        );
+      });
+
+  const handleSelectItem = (item: any) => {
+    if (!subscribedZones.some(z => z.id === item.id)) {
+      setSubscribedZones([...subscribedZones, item]);
+    }
+    setSearchTerm('');
+    setDropdownOpen(false);
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setSubscribedZones(subscribedZones.filter(z => z.id !== id));
+  };
+
+  const handleTestSiren = () => {
+    if (sirenPlaying) return;
+    setSirenPlaying(true);
+    const onEnded = () => setSirenPlaying(false);
+    
+    if (soundType === 'siren') {
+      playIsraeliSiren(volume, onEnded);
+    } else if (soundType === 'beep') {
+      playBeepSound(volume, 3.0, onEnded);
+    } else {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('🚨 Test Alert Notification', {
+          body: 'Visual popups are active.',
+        });
+      }
+      setSirenPlaying(false);
+    }
+  };
+
+  // Multi-Language State (declared at top of component)
 
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -147,6 +212,7 @@ export default function App() {
   const volumeRef = useRef(volume);
   const ttsEnabledRef = useRef(ttsEnabled);
   const subscribedZonesRef = useRef(subscribedZones);
+  const soundTypeRef = useRef(soundType);
   const langRef = useRef(lang);
   const citiesRef = useRef(cities);
 
@@ -154,6 +220,7 @@ export default function App() {
   useEffect(() => { volumeRef.current = volume; }, [volume]);
   useEffect(() => { ttsEnabledRef.current = ttsEnabled; }, [ttsEnabled]);
   useEffect(() => { subscribedZonesRef.current = subscribedZones; }, [subscribedZones]);
+  useEffect(() => { soundTypeRef.current = soundType; }, [soundType]);
   useEffect(() => { langRef.current = lang; }, [lang]);
   useEffect(() => { citiesRef.current = cities; }, [cities]);
 
@@ -244,7 +311,14 @@ export default function App() {
             }
 
             if (isTargeted) {
-              playIsraeliSiren(volumeRef.current);
+              const currentType = soundTypeRef.current;
+              const currentVolume = volumeRef.current;
+
+              if (currentType === 'siren') {
+                playIsraeliSiren(currentVolume);
+              } else if (currentType === 'beep') {
+                playBeepSound(currentVolume);
+              }
               
               if (ttsEnabledRef.current) {
                 setTimeout(() => {
@@ -445,8 +519,8 @@ export default function App() {
         <aside className="app-sidebar">
           <LiveFeed 
             alerts={sessionAlerts} 
-            soundEnabled={soundEnabled} 
-            setSoundEnabled={setSoundEnabled} 
+            soundMode={soundMode}
+            onOpenSettings={() => setSettingsOpen(true)}
             lang={lang}
             cities={cities}
           />
@@ -459,8 +533,8 @@ export default function App() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', flex: 1, minHeight: 0 }}>
             <LiveFeed 
               alerts={sessionAlerts} 
-              soundEnabled={soundEnabled} 
-              setSoundEnabled={setSoundEnabled} 
+              soundMode={soundMode}
+              onOpenSettings={() => setSettingsOpen(true)}
               lang={lang}
               cities={cities}
             />
@@ -529,14 +603,6 @@ export default function App() {
           isConnected={isConnected} 
           lang={lang} 
           cities={cities}
-          soundMode={soundMode}
-          setSoundMode={setSoundMode}
-          volume={volume}
-          setVolume={setVolume}
-          ttsEnabled={ttsEnabled}
-          setTtsEnabled={setTtsEnabled}
-          subscribedZones={subscribedZones}
-          setSubscribedZones={setSubscribedZones}
         />
       )}
 
@@ -581,32 +647,166 @@ export default function App() {
         </nav>
       )}
 
-      {/* MOBILE SETTINGS DRAWER */}
-      {isMobile && settingsOpen && (
-        <div className="settings-drawer-backdrop" onClick={() => setSettingsOpen(false)}>
-          <div className="settings-drawer-content" onClick={(e) => e.stopPropagation()}>
-            <div className="settings-drawer-header">
+      {/* ALERTS CONFIGURATION MODAL */}
+      {settingsOpen && (
+        <div className="modal-backdrop" onClick={() => setSettingsOpen(false)}>
+          <div className="modal-content glass-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
               <h3 className={lang === 'he' ? 'hebrew' : lang === 'ar' ? 'arabic' : ''}>
                 {t('settingsTitle', lang)}
               </h3>
-              <button className="settings-drawer-close" onClick={() => setSettingsOpen(false)}>
+              <button className="modal-close" onClick={() => setSettingsOpen(false)}>
                 &times;
               </button>
             </div>
-            <StatusCard 
-              isConnected={isConnected} 
-              lang={lang} 
-              cities={cities}
-              soundMode={soundMode}
-              setSoundMode={setSoundMode}
-              volume={volume}
-              setVolume={setVolume}
-              ttsEnabled={ttsEnabled}
-              setTtsEnabled={setTtsEnabled}
-              subscribedZones={subscribedZones}
-              setSubscribedZones={setSubscribedZones}
-              forceExpanded={true}
-            />
+            
+            <div className="modal-body">
+              {/* Alert Mode Selection */}
+              <div className="modal-setting-group">
+                <label>{t('soundMode', lang)}</label>
+                <select 
+                  value={soundMode} 
+                  onChange={(e) => setSoundMode(e.target.value as any)}
+                  className="modal-select"
+                >
+                  <option value="none">{t('soundNone', lang)}</option>
+                  <option value="all">{t('soundAll', lang)}</option>
+                  <option value="custom">{t('soundCustom', lang)}</option>
+                </select>
+              </div>
+
+              {/* Sound Style Selection */}
+              <div className="modal-setting-group">
+                <label>{t('soundTypeLabel', lang)}</label>
+                <select 
+                  value={soundType} 
+                  onChange={(e) => setSoundType(e.target.value as any)}
+                  className="modal-select"
+                >
+                  <option value="siren">{t('soundTypeSiren', lang)}</option>
+                  <option value="beep">{t('soundTypeBeep', lang)}</option>
+                  <option value="mute">{t('soundTypeMute', lang)}</option>
+                </select>
+              </div>
+
+              {/* Custom subscriptions multiselect */}
+              {soundMode === 'custom' && (
+                <div className="modal-setting-group searchable-multiselect">
+                  <label>{t('soundCustom', lang)}</label>
+                  <input 
+                    type="text" 
+                    className="multiselect-search-input"
+                    placeholder={t('searchPlaceholder', lang)}
+                    value={searchTerm}
+                    onFocus={() => setDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  
+                  {dropdownOpen && (
+                    <div className="multiselect-dropdown">
+                      {filteredItems.length > 0 ? (
+                        <>
+                          {filteredItems.some(i => i.type === 'zone') && (
+                            <div className="multiselect-group-header">
+                              {lang === 'he' ? 'אזורי הנחיות' : lang === 'ar' ? 'المناطق' : 'Guideline Zones'}
+                            </div>
+                          )}
+                          {filteredItems.filter(i => i.type === 'zone').slice(0, 15).map(item => (
+                            <div 
+                              key={item.id} 
+                              className="multiselect-item"
+                              onMouseDown={() => handleSelectItem(item)}
+                            >
+                              {lang === 'he' ? item.name : item.name_en}
+                            </div>
+                          ))}
+
+                          {filteredItems.some(i => i.type === 'city') && (
+                            <div className="multiselect-group-header">
+                              {lang === 'he' ? 'יישובים / ערים' : lang === 'ar' ? 'المدن والقرى' : 'Cities / Localities'}
+                            </div>
+                          )}
+                          {filteredItems.filter(i => i.type === 'city').slice(0, 30).map(item => (
+                            <div 
+                              key={item.id} 
+                              className="multiselect-item"
+                              onMouseDown={() => handleSelectItem(item)}
+                            >
+                              {lang === 'he' ? item.name : item.name_en}
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="multiselect-item" style={{ opacity: 0.5 }}>
+                          {lang === 'he' ? 'לא נמצאו תוצאות' : lang === 'ar' ? 'لا توجد نتائج' : 'No matches found'}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tags/Chips */}
+                  <div className="multiselect-chips">
+                    {subscribedZones.map(item => (
+                      <div key={item.id} className="multiselect-chip">
+                        <span>{lang === 'he' ? item.name : item.name_en}</span>
+                        <button 
+                          className="multiselect-chip-remove"
+                          onClick={() => handleRemoveItem(item.id)}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Volume Control */}
+              <div className="modal-setting-group">
+                <label>{t('volume', lang)}</label>
+                <div className="volume-control-wrapper">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.05"
+                    className="volume-slider" 
+                    value={volume}
+                    onChange={(e) => setVolume(parseFloat(e.target.value))}
+                  />
+                  <span style={{ fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums', opacity: 0.7 }}>
+                    {Math.round(volume * 100)}%
+                  </span>
+                </div>
+              </div>
+
+              {/* TTS Announcer Toggle */}
+              <div className="modal-setting-group modal-checkbox-row">
+                <input 
+                  type="checkbox" 
+                  id="tts-toggle" 
+                  checked={ttsEnabled}
+                  onChange={(e) => setTtsEnabled(e.target.checked)}
+                />
+                <label htmlFor="tts-toggle">
+                  {t('enableTts', lang)}
+                </label>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="modal-actions">
+              <button 
+                onClick={handleTestSiren} 
+                disabled={sirenPlaying} 
+                className="diagnostics-btn siren-btn"
+                style={{ width: '100%', padding: '10px', justifyContent: 'center' }}
+              >
+                <Volume2 size={12} />
+                {sirenPlaying ? t('playingTest', lang) : t('testSiren', lang)}
+              </button>
+            </div>
           </div>
         </div>
       )}

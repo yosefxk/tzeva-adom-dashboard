@@ -23,13 +23,13 @@ interface ActiveAlert {
 
 interface LiveFeedProps {
   alerts: ActiveAlert[];
-  soundEnabled: boolean;
-  setSoundEnabled: (enabled: boolean) => void;
+  soundMode: 'none' | 'all' | 'custom';
+  onOpenSettings: () => void;
   lang: Language;
   cities: any[];
 }
 
-export default function LiveFeed({ alerts, soundEnabled, setSoundEnabled, lang, cities }: LiveFeedProps) {
+export default function LiveFeed({ alerts, soundMode, onOpenSettings, lang, cities }: LiveFeedProps) {
 
   return (
     <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: '350px' }}>
@@ -42,19 +42,19 @@ export default function LiveFeed({ alerts, soundEnabled, setSoundEnabled, lang, 
         </h3>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button 
-            onClick={() => setSoundEnabled(!soundEnabled)} 
+            onClick={onOpenSettings} 
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
               gap: '6px', 
               padding: '6px 10px',
               fontSize: '0.8rem',
-              borderColor: soundEnabled ? 'var(--accent-red)' : 'var(--border-glass)'
+              borderColor: soundMode !== 'none' ? 'var(--accent-red)' : 'var(--border-glass)'
             }}
-            title={soundEnabled ? 'Mute' : 'Unmute'}
+            title={t('settingsTitle', lang)}
           >
-            {soundEnabled ? <Volume2 size={14} style={{ color: 'var(--accent-red)' }} /> : <VolumeX size={14} />}
-            {soundEnabled ? t('sirenOn', lang) : t('muted', lang)}
+            {soundMode !== 'none' ? <Volume2 size={14} style={{ color: 'var(--accent-red)' }} /> : <VolumeX size={14} />}
+            {soundMode !== 'none' ? t('sirenOn', lang) : t('muted', lang)}
           </button>
         </div>
       </div>

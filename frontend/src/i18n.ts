@@ -129,7 +129,11 @@ export const TRANSLATIONS: Record<string, Record<Language, string>> = {
   presetCustom: { en: 'Custom Range', he: 'טווח מותאם אישית', ar: 'نطاق مخصص' },
   sirenCount: { en: 'Sirens', he: 'אזעקות', ar: 'إنذاراً' },
   tabFeed: { en: 'Alerts Feed', he: 'יומן לייב', ar: 'الأحداث המباشرة' },
-  settingsTitle: { en: 'Warning Settings', he: 'הגדרות התרעות', ar: 'إعدادات התنبيهات' }
+  settingsTitle: { en: 'Warning Settings', he: 'הגדרות התרעות', ar: 'إعدادات التنبيهات' },
+  soundTypeLabel: { en: 'Alert Audio Style', he: 'סגנון צליל התרעה', ar: 'نمط صوت الإنذار' },
+  soundTypeSiren: { en: 'Air Raid Siren', he: 'סירנה עולה ויורדת', ar: 'صفارة الإنذار' },
+  soundTypeBeep: { en: 'Pulsating Beeps', he: 'צפצוף חירום', ar: 'رنين متقطع' },
+  soundTypeMute: { en: 'Visual Popup Only', he: 'התראה חזותית בלבד', ar: 'تنبيه بصري فقط' }
 };
 
 export const THREAT_TRANSLATIONS: Record<number, { title: Record<Language, string>; desc: Record<Language, string> }> = {

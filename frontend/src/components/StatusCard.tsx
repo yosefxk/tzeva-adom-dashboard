@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Radio, RefreshCw, AlertTriangle, ShieldCheck, Activity, ChevronUp, ChevronDown, Volume2 } from 'lucide-react';
+import { Radio, RefreshCw, AlertTriangle, ShieldCheck, Activity, ChevronUp, ChevronDown } from 'lucide-react';
 import { t } from '../i18n';
 import type { Language } from '../i18n';
 
@@ -15,35 +15,7 @@ interface StatusCardProps {
   isConnected: boolean;
   lang: Language;
   cities: any[];
-  
-  soundMode: 'none' | 'all' | 'custom';
-  setSoundMode: (mode: 'none' | 'all' | 'custom') => void;
-  
-  volume: number;
-  setVolume: (vol: number) => void;
-  
-  ttsEnabled: boolean;
-  setTtsEnabled: (enabled: boolean) => void;
-  
-  subscribedZones: any[];
-  setSubscribedZones: (zones: any[]) => void;
-  
   forceExpanded?: boolean;
-}
-
-// Play the real Israeli air raid siren (צפירה) using the siren.mp3 static asset
-export function playIsraeliSiren(volume: number = 0.8, onEnded?: () => void) {
-  try {
-    const audio = new Audio('/siren.mp3');
-    audio.volume = volume;
-    if (onEnded) {
-      audio.onended = onEnded;
-    }
-    audio.play();
-    return audio;
-  } catch (err) {
-    console.error('Failed to play Israeli siren audio.', err);
-  }
 }
 
 function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
@@ -58,71 +30,13 @@ function Tooltip({ text, children }: { text: string; children: React.ReactNode }
 export default function StatusCard({
   isConnected,
   lang,
-  cities,
-  soundMode,
-  setSoundMode,
-  volume,
-  setVolume,
-  ttsEnabled,
-  setTtsEnabled,
-  subscribedZones,
-  setSubscribedZones,
   forceExpanded = false
 }: StatusCardProps) {
   const [status, setStatus] = useState<StatusState | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [sirenPlaying, setSirenPlaying] = useState(false);
-  
+
   const isCurrentlyExpanded = expanded || forceExpanded;
-  
-  // Custom multiselect search state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-
-  // Extract unique HFC zones
-  const uniqueZones = Array.from(new Set(cities.map(c => c.zone).filter(Boolean))).map(zoneHeb => {
-    const match = cities.find(c => c.zone === zoneHeb);
-    return {
-      type: 'zone',
-      id: `zone-${zoneHeb}`,
-      name: zoneHeb,
-      name_en: match?.zone_en || zoneHeb,
-      value: zoneHeb
-    };
-  });
-
-  const cityItems = cities.map(c => ({
-    type: 'city',
-    id: `city-${c.id}`,
-    name: c.name,
-    name_en: c.name_en,
-    value: c.name
-  }));
-
-  const allItems = [...uniqueZones, ...cityItems];
-
-  const filteredItems = searchTerm.trim() === ''
-    ? allItems.slice(0, 100)
-    : allItems.filter(item => {
-        const query = searchTerm.toLowerCase();
-        return (
-          item.name.toLowerCase().includes(query) ||
-          item.name_en.toLowerCase().includes(query)
-        );
-      });
-
-  const handleSelectItem = (item: any) => {
-    if (!subscribedZones.some(z => z.id === item.id)) {
-      setSubscribedZones([...subscribedZones, item]);
-    }
-    setSearchTerm('');
-    setDropdownOpen(false);
-  };
-
-  const handleRemoveItem = (id: string) => {
-    setSubscribedZones(subscribedZones.filter(z => z.id !== id));
-  };
 
   const fetchStatus = () => {
     setLoading(true);
@@ -141,14 +55,6 @@ export default function StatusCard({
       .finally(() => {
         setLoading(false);
       });
-  };
-
-  const handleTestSiren = () => {
-    if (sirenPlaying) return;
-    setSirenPlaying(true);
-    playIsraeliSiren(volume, () => {
-      setSirenPlaying(false);
-    });
   };
 
   useEffect(() => {
@@ -242,142 +148,11 @@ export default function StatusCard({
             )}
           </div>
 
-          {/* Warning Settings Panel */}
-          <div className="settings-grid">
-            {/* Alert Mode Selection */}
-            <div className="settings-group">
-              <label>{t('soundMode', lang)}</label>
-              <select 
-                value={soundMode} 
-                onChange={(e) => setSoundMode(e.target.value as any)}
-                className="settings-select"
-              >
-                <option value="none">{t('soundNone', lang)}</option>
-                <option value="all">{t('soundAll', lang)}</option>
-                <option value="custom">{t('soundCustom', lang)}</option>
-              </select>
-            </div>
-
-            {/* Custom subscriptions searchable multiselect */}
-            {soundMode === 'custom' && (
-              <div className="settings-group searchable-multiselect">
-                <label>{t('soundCustom', lang)}</label>
-                <input 
-                  type="text" 
-                  className="multiselect-search-input"
-                  placeholder={t('searchPlaceholder', lang)}
-                  value={searchTerm}
-                  onFocus={() => setDropdownOpen(true)}
-                  onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                
-                {dropdownOpen && (
-                  <div className="multiselect-dropdown">
-                    {filteredItems.length > 0 ? (
-                      <>
-                        {filteredItems.some(i => i.type === 'zone') && (
-                          <div className="multiselect-group-header">
-                            {lang === 'he' ? 'אזורי הנחיות' : lang === 'ar' ? 'المناطق' : 'Guideline Zones'}
-                          </div>
-                        )}
-                        {filteredItems.filter(i => i.type === 'zone').slice(0, 15).map(item => (
-                          <div 
-                            key={item.id} 
-                            className="multiselect-item"
-                            onMouseDown={() => handleSelectItem(item)}
-                          >
-                            {lang === 'he' ? item.name : item.name_en}
-                          </div>
-                        ))}
-
-                        {filteredItems.some(i => i.type === 'city') && (
-                          <div className="multiselect-group-header">
-                            {lang === 'he' ? 'יישובים / ערים' : lang === 'ar' ? 'المدن والقرى' : 'Cities / Localities'}
-                          </div>
-                        )}
-                        {filteredItems.filter(i => i.type === 'city').slice(0, 30).map(item => (
-                          <div 
-                            key={item.id} 
-                            className="multiselect-item"
-                            onMouseDown={() => handleSelectItem(item)}
-                          >
-                            {lang === 'he' ? item.name : item.name_en}
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      <div className="multiselect-item" style={{ opacity: 0.5 }}>
-                        {lang === 'he' ? 'לא נמצאו תוצאות' : lang === 'ar' ? 'لا توجد نتائج' : 'No matches found'}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Tags/Chips */}
-                <div className="multiselect-chips">
-                  {subscribedZones.map(item => (
-                    <div key={item.id} className="multiselect-chip">
-                      <span>{lang === 'he' ? item.name : item.name_en}</span>
-                      <button 
-                        className="multiselect-chip-remove"
-                        onClick={() => handleRemoveItem(item.id)}
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Volume Control */}
-            <div className="settings-group">
-              <label>{t('volume', lang)}</label>
-              <div className="volume-control-wrapper">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="1" 
-                  step="0.05"
-                  className="volume-slider" 
-                  value={volume}
-                  onChange={(e) => setVolume(parseFloat(e.target.value))}
-                />
-                <span style={{ fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums', opacity: 0.7 }}>
-                  {Math.round(volume * 100)}%
-                </span>
-              </div>
-            </div>
-
-            {/* TTS Announcer Toggle */}
-            <div className="settings-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', minHeight: '38px', marginTop: '16px' }}>
-              <input 
-                type="checkbox" 
-                id="tts-toggle" 
-                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                checked={ttsEnabled}
-                onChange={(e) => setTtsEnabled(e.target.checked)}
-              />
-              <label htmlFor="tts-toggle" style={{ cursor: 'pointer', fontSize: '0.75rem', textTransform: 'none', color: 'var(--text-primary)', userSelect: 'none' }}>
-                {t('enableTts', lang)}
-              </label>
-            </div>
-          </div>
-
           {/* Action buttons */}
-          <div className="diagnostics-actions">
+          <div className="diagnostics-actions" style={{ border: 'none', paddingTop: 0 }}>
             <button onClick={fetchStatus} disabled={loading} className="diagnostics-btn">
               <RefreshCw size={12} className={loading ? 'spin' : ''} />
               {t('btnCheck', lang)}
-            </button>
-            <button 
-              onClick={handleTestSiren} 
-              disabled={sirenPlaying} 
-              className="diagnostics-btn siren-btn"
-            >
-              <Volume2 size={12} />
-              {sirenPlaying ? t('playingTest', lang) : t('testSiren', lang)}
             </button>
           </div>
         </div>
