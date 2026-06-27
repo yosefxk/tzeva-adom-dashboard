@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { initDatabase, db } from './db.js';
+import { initDatabase, db, insertAlertLocations } from './db.js';
 import { alerts } from './schema.js';
 import { sql } from 'drizzle-orm';
 import { fileURLToPath } from 'url';
@@ -180,7 +180,7 @@ export async function runCsvBackfill() {
       // Execute batch insert in transaction
       db.transaction(() => {
         for (const record of insertBuffer) {
-          db.insert(alerts).values({
+          const res = db.insert(alerts).values({
             id: record.id,
             timestamp: record.timestamp,
             category: record.category,
@@ -189,6 +189,10 @@ export async function runCsvBackfill() {
             description: record.description,
             isDrill: record.isDrill
           }).onConflictDoNothing().run();
+
+          if (res.changes > 0) {
+            insertAlertLocations(record.id, record.locations);
+          }
         }
       });
       inserted += insertBuffer.length;

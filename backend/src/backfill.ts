@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { initDatabase, db } from './db.js';
+import { initDatabase, db, insertAlertLocations } from './db.js';
 import { alerts } from './schema.js';
 import { TzofarAlertRaw } from './types.js';
 
@@ -106,6 +106,7 @@ async function main() {
 
               if (res.changes > 0) {
                 groupAdded++;
+                insertAlertLocations(syntheticId, subAlert.cities);
               }
             }
             

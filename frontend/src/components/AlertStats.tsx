@@ -262,9 +262,9 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
                     return '(Region)';
                   };
                   
-                  const formatCityInZone = (cityName: string, zoneName: string, l: string) => {
+                  const formatCityInZone = (cityName: string, zoneName: string, zoneNameEn: string, l: string) => {
                     if (!zoneName) return cityName;
-                    const translatedZone = translateZone(zoneName, l as any);
+                    const translatedZone = translateZone(zoneNameEn || zoneName, l as any);
                     if (l === 'he') {
                       let finalZone = translatedZone;
                       if (translatedZone.startsWith('ה') && translatedZone.length > 1) {
@@ -280,11 +280,11 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
 
                   let displayLabel = '';
                   if (item.type === 'zone') {
-                    const localizedZoneName = translateZone(item.name, lang);
+                    const localizedZoneName = translateZone(item.name_en || item.name, lang);
                     displayLabel = `${localizedZoneName} ${getZoneSuffix(lang)}`;
                   } else {
                     const localizedCityName = lang === 'en' ? item.name_en : item.name;
-                    displayLabel = formatCityInZone(localizedCityName, item.zone, lang);
+                    displayLabel = formatCityInZone(localizedCityName, item.zone, item.zone_en, lang);
                   }
 
                   return (

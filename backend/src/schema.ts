@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
 export const alerts = sqliteTable('alerts', {
   id: text('id').primaryKey(), // Alert ID (Oref numerical string, or generated for Tzofar alerts)
@@ -16,3 +16,14 @@ export const syncLogs = sqliteTable('sync_logs', {
   event: text('event').notNull(),
   details: text('details'),
 });
+
+export const alertLocations = sqliteTable('alert_locations', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  alertId: text('alert_id').notNull(),
+  cityName: text('city_name').notNull(),
+  zoneName: text('zone_name').notNull(),
+}, (table) => ({
+  alertIdIdx: index('alert_id_idx').on(table.alertId),
+  cityNameIdx: index('city_name_idx').on(table.cityName),
+  zoneNameIdx: index('zone_name_idx').on(table.zoneName),
+}));

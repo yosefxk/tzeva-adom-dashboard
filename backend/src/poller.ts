@@ -2,7 +2,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { db } from './db.js';
+import { db, insertAlertLocations } from './db.js';
 import { alerts, syncLogs } from './schema.js';
 import { eq, desc } from 'drizzle-orm';
 import { AlertData, CityInfo, OrefAlertRaw, TzofarAlertRaw } from './types.js';
@@ -206,7 +206,7 @@ export function startPoller(onAlert: (alert: AlertData) => void) {
             const alert = standardizeOrefAlert(rawAlert);
 
             // Persist to database
-            await db.insert(alerts).values({
+            const res = await db.insert(alerts).values({
               id: alert.id,
               timestamp: alert.timestamp,
               category: alert.category,
@@ -215,6 +215,10 @@ export function startPoller(onAlert: (alert: AlertData) => void) {
               description: alert.description,
               isDrill: alert.isDrill ? 1 : 0
             }).onConflictDoNothing();
+
+            if (res.changes > 0) {
+              insertAlertLocations(alert.id, alert.locations);
+            }
 
             onAlert(alert);
           }
@@ -298,7 +302,7 @@ export function startPoller(onAlert: (alert: AlertData) => void) {
                 };
 
                 // Persist to DB
-                await db.insert(alerts).values({
+                const res = await db.insert(alerts).values({
                   id: alert.id,
                   timestamp: alert.timestamp,
                   category: alert.category,
@@ -307,6 +311,10 @@ export function startPoller(onAlert: (alert: AlertData) => void) {
                   description: alert.description,
                   isDrill: alert.isDrill ? 1 : 0
                 }).onConflictDoNothing();
+
+                if (res.changes > 0) {
+                  insertAlertLocations(alert.id, alert.locations);
+                }
 
                 onAlert(alert);
               }
@@ -401,7 +409,10 @@ async function syncHistoryStartup() {
           description: raw.category_desc || '',
           isDrill: isDrill ? 1 : 0
         }).onConflictDoNothing();
-        if (res.changes > 0) added++;
+        if (res.changes > 0) {
+          added++;
+          insertAlertLocations(String(raw.rid || raw.matrix_id || localTimeMs), locations);
+        }
       }
       
       console.log(`Database populated with ${added} new historical alerts from Oref.`);
@@ -454,7 +465,10 @@ async function syncHistoryStartup() {
             description: 'היכנסו למרחב המוגן',
             isDrill: subAlert.isDrill ? 1 : 0
           }).onConflictDoNothing();
-          if (res.changes > 0) added++;
+          if (res.changes > 0) {
+            added++;
+            insertAlertLocations(syntheticId, subAlert.cities);
+          }
         }
       }
       console.log(`Database populated with ${added} new historical alerts from Tzofar fallback.`);

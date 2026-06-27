@@ -4,6 +4,7 @@ import * as schema from './schema.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { sql } from 'drizzle-orm';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,6 +18,84 @@ const dbPath = path.join(dbDir, 'alerts.db');
 const sqlite = new DatabaseSync(dbPath);
 
 export const db = drizzle({ client: sqlite, schema });
+
+// Load cities cache helper for mapping locations to zones
+let citiesCache: any[] = [];
+const citiesPath = path.join(dbDir, 'cities.json');
+try {
+  if (fs.existsSync(citiesPath)) {
+    citiesCache = JSON.parse(fs.readFileSync(citiesPath, 'utf8'));
+  }
+} catch (err) {
+  console.error('Failed to load cities for db mapping helper.', err);
+}
+
+const cityToZone = new Map<string, string>();
+citiesCache.forEach(c => {
+  if (c.name) {
+    cityToZone.set(c.name, c.zone || '');
+  }
+});
+
+// Helper to insert mapping records
+export function insertAlertLocations(alertId: string, locations: string[]) {
+  for (const loc of locations) {
+    const zone = cityToZone.get(loc) || '';
+    db.insert(schema.alertLocations).values({
+      alertId,
+      cityName: loc,
+      zoneName: zone
+    }).run();
+  }
+}
+
+// Migration backfill for existing alerts in db
+export function backfillAlertLocations() {
+  const countResult = db.select({ count: sql<number>`count(*)` }).from(schema.alertLocations).get();
+  const count = countResult?.count || 0;
+  
+  if (count === 0) {
+    const alertsCountResult = db.select({ count: sql<number>`count(*)` }).from(schema.alerts).get();
+    const alertsCount = alertsCountResult?.count || 0;
+    
+    if (alertsCount > 0) {
+      console.log(`Migrating alert_locations for ${alertsCount} existing alerts...`);
+      
+      const allAlerts = db.select({ id: schema.alerts.id, locations: schema.alerts.locations }).from(schema.alerts).all();
+      const insertBuffer: { alertId: string; cityName: string; zoneName: string }[] = [];
+      
+      for (const alert of allAlerts) {
+        try {
+          const locs: string[] = JSON.parse(alert.locations);
+          if (Array.isArray(locs)) {
+            for (const loc of locs) {
+              const zone = cityToZone.get(loc) || '';
+              insertBuffer.push({
+                alertId: alert.id,
+                cityName: loc,
+                zoneName: zone
+              });
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+      
+      console.log(`Inserting ${insertBuffer.length} alert location rows in batches of 1000...`);
+      const BATCH_SIZE = 1000;
+      for (let i = 0; i < insertBuffer.length; i += BATCH_SIZE) {
+        const batch = insertBuffer.slice(i, i + BATCH_SIZE);
+        db.transaction(() => {
+          for (const row of batch) {
+            db.insert(schema.alertLocations).values(row).run();
+          }
+        });
+      }
+      console.log('alert_locations migration completed successfully.');
+    }
+  }
+}
 
 export function initDatabase() {
   console.log(`Database connected (native node:sqlite) at: ${dbPath}`);
@@ -38,7 +117,23 @@ export function initDatabase() {
       event TEXT NOT NULL,
       details TEXT
     );
+    CREATE TABLE IF NOT EXISTS alert_locations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      alert_id TEXT NOT NULL,
+      city_name TEXT NOT NULL,
+      zone_name TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts (timestamp);
+    CREATE INDEX IF NOT EXISTS idx_alert_locations_alert_id ON alert_locations (alert_id);
+    CREATE INDEX IF NOT EXISTS idx_alert_locations_city_name ON alert_locations (city_name);
+    CREATE INDEX IF NOT EXISTS idx_alert_locations_zone_name ON alert_locations (zone_name);
   `);
   console.log('Database tables verified/created successfully.');
+  
+  // Run backfill migration on startup if needed
+  try {
+    backfillAlertLocations();
+  } catch (err) {
+    console.error('Failed to run alert_locations backfill migration:', err);
+  }
 }

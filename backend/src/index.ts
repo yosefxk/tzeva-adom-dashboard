@@ -4,8 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { initDatabase, db } from './db.js';
-import { alerts } from './schema.js';
-import { eq, like, and, or, desc, sql } from 'drizzle-orm';
+import { alerts, alertLocations } from './schema.js';
+import { eq, like, and, or, desc, sql, inArray } from 'drizzle-orm';
 import { startPoller, loadRecentAlertIds, resolveLocationData, getCategoryMetadata } from './poller.js';
 import { AlertData, CityInfo } from './types.js';
 
@@ -55,14 +55,18 @@ function buildSearchFilter(search: string) {
   const normSearch = normalizeString(search);
   
   // 1. Check if search term matches a zone name (Hebrew or English)
-  const zoneCities = citiesCache.filter(c => 
+  const matchedZone = citiesCache.find(c => 
     (c.zone_en && normalizeString(c.zone_en) === normSearch) ||
     (c.zone && normalizeString(c.zone) === normSearch)
   );
 
-  if (zoneCities.length > 0) {
-    const cityConditions = zoneCities.map(c => like(alerts.locations, `%${c.name}%`));
-    return or(...cityConditions);
+  if (matchedZone && matchedZone.zone) {
+    const matchingAlertIdsSubquery = db
+      .select({ alertId: alertLocations.alertId })
+      .from(alertLocations)
+      .where(eq(alertLocations.zoneName, matchedZone.zone));
+      
+    return inArray(alerts.id, matchingAlertIdsSubquery);
   } else {
     // 2. Otherwise, treat it as a city or title search
     const matchingCities = citiesCache.filter(c => 
@@ -71,13 +75,22 @@ function buildSearchFilter(search: string) {
       (c.name_ar && normalizeString(c.name_ar).includes(normSearch))
     );
 
-    const cityConditions = matchingCities.map(c => like(alerts.locations, `%${c.name}%`));
-    
-    return or(
+    const orConditions = [
       like(alerts.title, `%${search}%`),
-      like(alerts.description, `%${search}%`),
-      ...cityConditions
-    );
+      like(alerts.description, `%${search}%`)
+    ];
+
+    if (matchingCities.length > 0) {
+      const matchingHebrewNames = matchingCities.map(c => c.name);
+      const matchingAlertIdsSubquery = db
+        .select({ alertId: alertLocations.alertId })
+        .from(alertLocations)
+        .where(inArray(alertLocations.cityName, matchingHebrewNames));
+        
+      orConditions.push(inArray(alerts.id, matchingAlertIdsSubquery));
+    }
+    
+    return or(...orConditions);
   }
 }
 
