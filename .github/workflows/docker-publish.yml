@@ -74,3 +74,10 @@ jobs:
           labels: ${{ steps.meta-frontend.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # -----------------------------------------------------------
+      # Trigger Redeploy
+      # -----------------------------------------------------------
+      - name: Trigger Portainer Redeploy Webhook
+        run: |
+          curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
