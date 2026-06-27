@@ -1166,3 +1166,32 @@ button.primary:hover {
   border-top: 1px solid var(--border-glass);
   padding-top: 18px;
 }
+
+/* Autocomplete Suggestion Dropdowns */
+.autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass-focus);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+}
+
+.autocomplete-item {
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  color: var(--text-primary);
+}
+
+.autocomplete-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}

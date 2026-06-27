@@ -44,6 +44,39 @@ export default function AlertHistory({ lang, cities }: AlertHistoryProps) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Autocomplete Suggestions State
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (!search.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    const query = search.trim().toLowerCase();
+    const matches = cities.filter(c => {
+      const name = c.name ? c.name.toLowerCase() : '';
+      const nameEn = c.name_en ? c.name_en.toLowerCase() : '';
+      const nameAr = c.name_ar ? c.name_ar.toLowerCase() : '';
+      const zone = c.zone ? c.zone.toLowerCase() : '';
+      const zoneEn = c.zone_en ? c.zone_en.toLowerCase() : '';
+      
+      return name.includes(query) || 
+             nameEn.includes(query) || 
+             nameAr.includes(query) ||
+             zone.includes(query) ||
+             zoneEn.includes(query);
+    });
+    setSuggestions(matches.slice(0, 10));
+  }, [search, cities]);
+
+  const handleSelectSuggestion = (city: any) => {
+    const nameToSet = lang === 'en' ? city.name_en : city.name;
+    setSearch(nameToSet);
+    setPage(1);
+    setShowSuggestions(false);
+  };
+
   const LIMIT = 15;
 
   const fetchHistory = useCallback(() => {
@@ -226,6 +259,8 @@ export default function AlertHistory({ lang, cities }: AlertHistoryProps) {
               placeholder={t('placeholderSearch', lang)} 
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               style={{ 
                 paddingLeft: (lang === 'he' || lang === 'ar') ? '12px' : '32px', 
                 paddingRight: (lang === 'he' || lang === 'ar') ? '32px' : '12px', 
@@ -233,6 +268,35 @@ export default function AlertHistory({ lang, cities }: AlertHistoryProps) {
                 textAlign: (lang === 'he' || lang === 'ar') ? 'right' : 'left'
               }}
             />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="autocomplete-dropdown">
+                {suggestions.map((city) => {
+                  const localizedName = lang === 'en' ? city.name_en : city.name;
+                  const localizedZone = lang === 'en' ? city.zone_en : translateZone(city.zone, lang);
+                  return (
+                    <div 
+                      key={city.value || city.name} 
+                      className="autocomplete-item"
+                      onMouseDown={() => handleSelectSuggestion(city)}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        textAlign: (lang === 'he' || lang === 'ar') ? 'right' : 'left',
+                        direction: (lang === 'he' || lang === 'ar') ? 'rtl' : 'ltr'
+                      }}
+                    >
+                      <span>{localizedName}</span>
+                      {localizedZone && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {localizedZone}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
