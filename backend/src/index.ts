@@ -41,18 +41,44 @@ try {
   console.error('Failed to load cities for express routing cache.', err);
 }
 
-// Helper to expand English search terms to include Hebrew equivalents in citiesCache
-function expandSearchTerm(searchTerm: string): string {
-  if (!searchTerm) return '';
-  // Split by whitespace and commas
-  const tokens = searchTerm.split(/[\s,]+/).filter(Boolean);
-  const extra: string[] = [];
-  tokens.forEach(tok => {
-    const lower = tok.toLowerCase();
-    const city = citiesCache.find(c => c.name_en && c.name_en.toLowerCase() === lower);
-    if (city && city.name) extra.push(city.name);
-  });
-  return extra.length ? `${searchTerm} ${extra.join(' ')}` : searchTerm;
+function normalizeString(str: string): string {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/['"\-–—\s,.]/g, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function buildSearchFilter(search: string) {
+  if (!search) return null;
+  const normSearch = normalizeString(search);
+  
+  // 1. Check if search term matches a zone name (Hebrew or English)
+  const zoneCities = citiesCache.filter(c => 
+    (c.zone_en && normalizeString(c.zone_en) === normSearch) ||
+    (c.zone && normalizeString(c.zone) === normSearch)
+  );
+
+  if (zoneCities.length > 0) {
+    const cityConditions = zoneCities.map(c => like(alerts.locations, `%${c.name}%`));
+    return or(...cityConditions);
+  } else {
+    // 2. Otherwise, treat it as a city or title search
+    const matchingCities = citiesCache.filter(c => 
+      (c.name_en && normalizeString(c.name_en).includes(normSearch)) ||
+      (c.name && normalizeString(c.name).includes(normSearch)) ||
+      (c.name_ar && normalizeString(c.name_ar).includes(normSearch))
+    );
+
+    const cityConditions = matchingCities.map(c => like(alerts.locations, `%${c.name}%`));
+    
+    return or(
+      like(alerts.title, `%${search}%`),
+      like(alerts.description, `%${search}%`),
+      ...cityConditions
+    );
+  }
 }
 
 // -------------------------------------------------------------
@@ -158,14 +184,10 @@ app.get('/api/alerts/history', async (req, res) => {
     const filters = [];
 
     if (search) {
-      const expandedSearch = expandSearchTerm(search);
-      filters.push(
-        or(
-          like(alerts.title, `%${expandedSearch}%`),
-          like(alerts.locations, `%${expandedSearch}%`),
-          like(alerts.description, `%${expandedSearch}%`)
-        )
-      );
+      const searchFilter = buildSearchFilter(search);
+      if (searchFilter) {
+        filters.push(searchFilter);
+      }
     }
     if (category !== null) {
       filters.push(eq(alerts.category, category));
@@ -260,14 +282,10 @@ app.get('/api/alerts/stats', async (req, res) => {
 
     const filters = [];
     if (search) {
-      const expandedSearch = expandSearchTerm(search);
-      filters.push(
-        or(
-          like(alerts.title, `%${expandedSearch}%`),
-          like(alerts.locations, `%${expandedSearch}%`),
-          like(alerts.description, `%${expandedSearch}%`)
-        )
-      );
+      const searchFilter = buildSearchFilter(search);
+      if (searchFilter) {
+        filters.push(searchFilter);
+      }
     }
     if (category !== null && !isNaN(category)) {
       filters.push(eq(alerts.category, category));

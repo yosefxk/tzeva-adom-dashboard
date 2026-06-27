@@ -30,6 +30,15 @@ interface AlertHistoryProps {
   cities: any[];
 }
 
+const normalizeString = (str: string): string => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/['"\-–—\s,.]/g, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+};
+
 export default function AlertHistory({ lang, cities }: AlertHistoryProps) {
   const [historyData, setHistoryData] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,25 +62,66 @@ export default function AlertHistory({ lang, cities }: AlertHistoryProps) {
       setSuggestions([]);
       return;
     }
-    const query = search.trim().toLowerCase();
-    const matches = cities.filter(c => {
-      const name = c.name ? c.name.toLowerCase() : '';
-      const nameEn = c.name_en ? c.name_en.toLowerCase() : '';
-      const nameAr = c.name_ar ? c.name_ar.toLowerCase() : '';
-      const zone = c.zone ? c.zone.toLowerCase() : '';
-      const zoneEn = c.zone_en ? c.zone_en.toLowerCase() : '';
-      
-      return name.includes(query) || 
-             nameEn.includes(query) || 
-             nameAr.includes(query) ||
-             zone.includes(query) ||
-             zoneEn.includes(query);
-    });
-    setSuggestions(matches.slice(0, 10));
-  }, [search, cities]);
+    const query = normalizeString(search);
+    if (!query) {
+      setSuggestions([]);
+      return;
+    }
 
-  const handleSelectSuggestion = (city: any) => {
-    const nameToSet = lang === 'en' ? city.name_en : city.name;
+    // 1. Find matching zones
+    const uniqueZonesMap = new Map<string, { name: string; name_en: string }>();
+    cities.forEach(c => {
+      if (c.zone && !uniqueZonesMap.has(c.zone)) {
+        uniqueZonesMap.set(c.zone, {
+          name: c.zone,
+          name_en: c.zone_en || c.zone
+        });
+      }
+    });
+
+    const matchingZones: any[] = [];
+    uniqueZonesMap.forEach((zoneInfo) => {
+      const nameNorm = normalizeString(zoneInfo.name);
+      const nameEnNorm = normalizeString(zoneInfo.name_en);
+      const translatedNorm = normalizeString(translateZone(zoneInfo.name, lang));
+      if (nameNorm.includes(query) || nameEnNorm.includes(query) || translatedNorm.includes(query)) {
+        matchingZones.push({
+          type: 'zone',
+          id: `zone-${zoneInfo.name}`,
+          name: zoneInfo.name,
+          name_en: zoneInfo.name_en,
+          value: zoneInfo.name
+        });
+      }
+    });
+
+    // 2. Find matching cities
+    const matchingCities: any[] = [];
+    cities.forEach(c => {
+      const nameNorm = normalizeString(c.name);
+      const nameEnNorm = normalizeString(c.name_en);
+      const nameArNorm = normalizeString(c.name_ar || '');
+      
+      if (nameNorm.includes(query) || nameEnNorm.includes(query) || nameArNorm.includes(query)) {
+        matchingCities.push({
+          type: 'city',
+          id: `city-${c.value || c.name}`,
+          name: c.name,
+          name_en: c.name_en,
+          name_ar: c.name_ar,
+          zone: c.zone,
+          zone_en: c.zone_en,
+          value: c.name
+        });
+      }
+    });
+
+    const combined = [...matchingZones, ...matchingCities];
+    setSuggestions(combined.slice(0, 10));
+  }, [search, cities, lang]);
+
+  const handleSelectSuggestion = (item: any) => {
+    const nameToSet = lang === 'en' ? item.name_en : item.name;
     setSearch(nameToSet);
     setPage(1);
     setShowSuggestions(false);
@@ -270,28 +320,49 @@ export default function AlertHistory({ lang, cities }: AlertHistoryProps) {
             />
             {showSuggestions && suggestions.length > 0 && (
               <div className="autocomplete-dropdown">
-                {suggestions.map((city) => {
-                  const localizedName = lang === 'en' ? city.name_en : city.name;
-                  const localizedZone = lang === 'en' ? city.zone_en : translateZone(city.zone, lang);
+                {suggestions.map((item) => {
+                  const getZoneSuffix = (l: string) => {
+                    if (l === 'he') return '(אזור)';
+                    if (l === 'ar') return '(منطقة)';
+                    return '(Region)';
+                  };
+                  
+                  const formatCityInZone = (cityName: string, zoneName: string, l: string) => {
+                    if (!zoneName) return cityName;
+                    const translatedZone = translateZone(zoneName, l as any);
+                    if (l === 'he') {
+                      let finalZone = translatedZone;
+                      if (translatedZone.startsWith('ה') && translatedZone.length > 1) {
+                        finalZone = translatedZone.substring(1);
+                      }
+                      return `${cityName} (עיר ב${finalZone})`;
+                    }
+                    if (l === 'ar') {
+                      return `${cityName} (مدينة في ${translatedZone})`;
+                    }
+                    return `${cityName} (City in ${translatedZone})`;
+                  };
+
+                  let displayLabel = '';
+                  if (item.type === 'zone') {
+                    const localizedZoneName = translateZone(item.name, lang);
+                    displayLabel = `${localizedZoneName} ${getZoneSuffix(lang)}`;
+                  } else {
+                    const localizedCityName = lang === 'en' ? item.name_en : item.name;
+                    displayLabel = formatCityInZone(localizedCityName, item.zone, lang);
+                  }
+
                   return (
                     <div 
-                      key={city.value || city.name} 
+                      key={item.id} 
                       className="autocomplete-item"
-                      onMouseDown={() => handleSelectSuggestion(city)}
+                      onMouseDown={() => handleSelectSuggestion(item)}
                       style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
                         textAlign: (lang === 'he' || lang === 'ar') ? 'right' : 'left',
                         direction: (lang === 'he' || lang === 'ar') ? 'rtl' : 'ltr'
                       }}
                     >
-                      <span>{localizedName}</span>
-                      {localizedZone && (
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                          {localizedZone}
-                        </span>
-                      )}
+                      {displayLabel}
                     </div>
                   );
                 })}
