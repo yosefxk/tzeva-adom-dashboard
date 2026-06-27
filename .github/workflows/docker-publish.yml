@@ -76,8 +76,17 @@ jobs:
           cache-to: type=gha,mode=max
 
       # -----------------------------------------------------------
-      # Trigger Redeploy
+      # Trigger Redeploy (via Tailscale — server is on private network)
       # -----------------------------------------------------------
+      - name: Connect to Tailscale
+        if: env.PORTAINER_WEBHOOK_URL != ''
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          tags: tag:ci
+        env:
+          PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+
       - name: Trigger Portainer Redeploy Webhook
         if: env.PORTAINER_WEBHOOK_URL != ''
         env:
