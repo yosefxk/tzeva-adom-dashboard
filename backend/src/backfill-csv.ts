@@ -2,6 +2,8 @@ import axios from 'axios';
 import { initDatabase, db } from './db.js';
 import { alerts } from './schema.js';
 import { sql } from 'drizzle-orm';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Threat type mapping
 function getThreatCategory(threat: number) {
@@ -79,7 +81,7 @@ interface GroupedAlert {
   isDrill: number;
 }
 
-async function main() {
+export async function runCsvBackfill() {
   initDatabase();
 
   console.log('Downloading alarms.csv historical archive from yuval-harpaz/alarms (16.5MB)...');
@@ -204,6 +206,14 @@ async function main() {
   console.log(`Successfully processed and loaded ${countResult[0]?.count || 0} historical entries into alerts.db.`);
 }
 
-main().catch(err => {
-  console.error('Fatal CSV backfill failure.', err);
-});
+const isMain = process.argv[1] && (
+  process.argv[1].endsWith('backfill-csv.ts') || 
+  process.argv[1].endsWith('backfill-csv.js') ||
+  (import.meta.url && fileURLToPath(import.meta.url) === fs.realpathSync(process.argv[1]))
+);
+
+if (isMain) {
+  runCsvBackfill().catch(err => {
+    console.error('Fatal CSV backfill failure.', err);
+  });
+}

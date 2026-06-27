@@ -406,6 +406,27 @@ async function main() {
   // 1. Initialize SQLite tables
   initDatabase();
 
+  // 1b. Check alert count and trigger historical backfill if low (< 10000)
+  try {
+    const countResult = db.select({ count: sql<number>`count(*)` }).from(alerts).all();
+    const alertCount = countResult[0]?.count || 0;
+    console.log(`Current database alert count: ${alertCount}`);
+    if (alertCount < 10000) {
+      console.log(`Alert count (${alertCount}) is low. Running CSV backfill in the background...`);
+      import('./backfill-csv.js').then(module => {
+        module.runCsvBackfill().then(() => {
+          console.log('Background CSV backfill completed successfully.');
+        }).catch(err => {
+          console.error('Background CSV backfill failed:', err);
+        });
+      }).catch(err => {
+        console.error('Failed to load backfill-csv module:', err);
+      });
+    }
+  } catch (err) {
+    console.error('Failed to check database alert count or run backfill:', err);
+  }
+
   // 2. Pre-populate seen IDs from db
   await loadRecentAlertIds();
 
