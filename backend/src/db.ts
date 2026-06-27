@@ -4,7 +4,7 @@ import * as schema from './schema.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,24 +37,52 @@ citiesCache.forEach(c => {
   }
 });
 
+// Resolves any raw alert location name to the canonical name in cities.json
+export function getCanonicalCityName(rawName: string): string {
+  const trimmed = rawName.trim();
+  if (!trimmed) return rawName;
+
+  // 1. Exact match
+  let match = citiesCache.find(c => c.name === trimmed || c.value === trimmed);
+  if (match) return match.name;
+
+  // 2. Substring dash match
+  const parts = trimmed.split(' - ');
+  const mainName = parts[0].trim();
+  match = citiesCache.find(c => c.name === mainName || c.value === mainName);
+  if (match) return match.name;
+
+  // 3. Fuzzy substring match (contains)
+  match = citiesCache.find(c => trimmed.includes(c.name) || c.name.includes(trimmed));
+  if (match) return match.name;
+
+  return trimmed; // fallback to raw
+}
+
 // Helper to insert mapping records
 export function insertAlertLocations(alertId: string, locations: string[]) {
   for (const loc of locations) {
-    const zone = cityToZone.get(loc) || '';
+    const canonicalName = getCanonicalCityName(loc);
+    const zone = cityToZone.get(canonicalName) || '';
     db.insert(schema.alertLocations).values({
       alertId,
-      cityName: loc,
+      cityName: canonicalName,
       zoneName: zone
     }).run();
   }
 }
 
 // Migration backfill for existing alerts in db
-export function backfillAlertLocations() {
+export function backfillAlertLocations(force: boolean = false) {
   const countResult = db.select({ count: sql<number>`count(*)` }).from(schema.alertLocations).get();
   const count = countResult?.count || 0;
   
-  if (count === 0) {
+  if (count === 0 || force) {
+    if (force) {
+      console.log('Force rebuild requested. Truncating alert_locations...');
+      db.delete(schema.alertLocations).run();
+    }
+
     const alertsCountResult = db.select({ count: sql<number>`count(*)` }).from(schema.alerts).get();
     const alertsCount = alertsCountResult?.count || 0;
     
@@ -69,10 +97,11 @@ export function backfillAlertLocations() {
           const locs: string[] = JSON.parse(alert.locations);
           if (Array.isArray(locs)) {
             for (const loc of locs) {
-              const zone = cityToZone.get(loc) || '';
+              const canonicalName = getCanonicalCityName(loc);
+              const zone = cityToZone.get(canonicalName) || '';
               insertBuffer.push({
                 alertId: alert.id,
-                cityName: loc,
+                cityName: canonicalName,
                 zoneName: zone
               });
             }
@@ -132,7 +161,18 @@ export function initDatabase() {
   
   // Run backfill migration on startup if needed
   try {
-    backfillAlertLocations();
+    const checkLog = db.select().from(schema.syncLogs).where(eq(schema.syncLogs.event, 'canonical_backfill_done')).get();
+    if (!checkLog) {
+      console.log('Running canonical alert_locations migration backfill...');
+      backfillAlertLocations(true);
+      db.insert(schema.syncLogs).values({
+        timestamp: Date.now(),
+        event: 'canonical_backfill_done',
+        details: 'Rebuild alert_locations with canonical names from cities.json'
+      }).run();
+    } else {
+      backfillAlertLocations(false);
+    }
   } catch (err) {
     console.error('Failed to run alert_locations backfill migration:', err);
   }

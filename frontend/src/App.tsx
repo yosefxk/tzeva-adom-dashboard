@@ -404,6 +404,26 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {/* Dynamic language switcher - cycles Hebrew -> English -> Arabic */}
+      <div className="fixed top-4 right-4 z-[9999]" style={{ direction: "ltr" }}>
+        <button
+          onClick={() => {
+            const nextL: Record<Language, Language> = { he: 'en', en: 'ar', ar: 'he' };
+            setLang(nextL[lang]);
+          }}
+          className="glass-panel rounded-lg px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:border-white/20 transition-all inline-block cursor-pointer font-sans"
+          style={{
+            background: 'rgba(24, 24, 27, 0.65)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
+            color: '#a1a1aa',
+            fontWeight: 600
+          }}
+        >
+          {lang === 'he' ? '🇺🇸 EN' : lang === 'en' ? '🇸🇦 AR' : '🇮🇱 עב'}
+        </button>
+      </div>
       
       {/* HEADER SECTION */}
       <header className="app-header">
@@ -505,26 +525,7 @@ export default function App() {
             </button>
           )}
 
-          {/* Language Selector Dropdown (Desktop only) */}
-          {!isMobile && (
-            <select 
-              value={lang} 
-              onChange={(e) => setLang(e.target.value as Language)}
-              style={{ 
-                padding: '6px 10px', 
-                fontSize: '0.8rem', 
-                background: 'rgba(255,255,255,0.05)', 
-                border: '1px solid var(--border-glass)', 
-                borderRadius: '6px', 
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              <option value="en">English</option>
-              <option value="he">עברית</option>
-              <option value="ar">العربية</option>
-            </select>
-          )}
+
 
           {/* Browser Notification Switcher (Desktop only) */}
           {!isMobile && (
