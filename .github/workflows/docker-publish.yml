@@ -79,16 +79,17 @@ jobs:
       # Trigger Redeploy (via Tailscale — server is on private network)
       # -----------------------------------------------------------
       - name: Connect to Tailscale
-        if: env.PORTAINER_WEBHOOK_URL != ''
+        if: env.PORTAINER_WEBHOOK_URL != '' && env.TAILSCALE_AUTHKEY != ''
         uses: tailscale/github-action@v3
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
         env:
           PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+          TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       - name: Trigger Portainer Redeploy Webhook
         if: env.PORTAINER_WEBHOOK_URL != ''
         env:
           PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
         run: |
-          curl -X POST "$PORTAINER_WEBHOOK_URL"
+          curl --fail --show-error --silent -k -X POST "$PORTAINER_WEBHOOK_URL"
