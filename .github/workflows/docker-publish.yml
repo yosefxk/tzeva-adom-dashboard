@@ -104,7 +104,7 @@ jobs:
             url_with_pull="${PORTAINER_WEBHOOK_URL}?pullImage=true"
           fi
 
-          status_code=$(curl -sS -o /tmp/portainer-response.txt -w "%{http_code}" -X POST "$url_with_pull" || true)
+          status_code=$(curl -k -sS -o /tmp/portainer-response.txt -w "%{http_code}" -X POST "$url_with_pull" || true)
           echo "HTTP status: $status_code"
 
           if [[ "$status_code" -lt 200 || "$status_code" -ge 300 ]]; then
