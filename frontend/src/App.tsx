@@ -29,6 +29,36 @@ interface ActiveAlert {
   isDrill: boolean;
 }
 
+function FlagIcon({ country }: { country: "us" | "il" | "sa" }) {
+  if (country === "il") {
+    return (
+      <svg width="15" stroke="#d4d4d8" strokeWidth="0.5" height="10" viewBox="0 0 220 160" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '1.5px', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+        <rect width="220" height="160" fill="white"/>
+        <rect y="15" width="220" height="25" fill="#0038a8"/>
+        <rect y="120" width="220" height="25" fill="#0038a8"/>
+        <text x="110" y="92" fontSize="42" fill="#0038a8" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">✡</text>
+      </svg>
+    );
+  }
+  if (country === "sa") {
+    return (
+      <svg width="15" stroke="#d4d4d8" strokeWidth="0.5" height="10" viewBox="0 0 30 20" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '1.5px', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+        <rect width="30" height="20" fill="#006c35"/>
+        <path d="M6 14h18M18 12l2 2-2 2" stroke="white" strokeWidth="1" fill="none"/>
+        <text x="15" y="10" fontSize="8" fill="white" textAnchor="middle" fontFamily="sans-serif">⚔</text>
+      </svg>
+    );
+  }
+  return (
+    <svg width="15" stroke="#d4d4d8" strokeWidth="0.5" height="10" viewBox="0 0 74 50" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '1.5px', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+      <rect width="74" height="50" fill="#b22234"/>
+      <path d="M0,3.8h74M0,11.5h74M0,19.2h74M0,26.9h74M0,34.6h74M0,42.3h74" stroke="white" strokeWidth="3.8"/>
+      <rect width="32" height="27" fill="#3c3b6e"/>
+      <text x="16" y="20" fontSize="18" fill="white" textAnchor="middle" fontFamily="sans-serif">★</text>
+    </svg>
+  );
+}
+
 export default function App() {
   // Multi-Language State (declared early to be accessible by downstream filter methods)
   const [lang, setLang] = useState<Language>(() => {
@@ -423,10 +453,13 @@ export default function App() {
             fontSize: '0.75rem',
             borderRadius: '8px',
             cursor: 'pointer',
-            fontFamily: 'sans-serif'
+            fontFamily: 'sans-serif',
+            display: 'inline-flex',
+            alignItems: 'center'
           }}
         >
-          {lang === 'he' ? '🇺🇸 EN' : lang === 'en' ? '🇸🇦 AR' : '🇮🇱 עב'}
+          <FlagIcon country={lang === 'he' ? 'us' : lang === 'en' ? 'sa' : 'il'} />
+          <span>{lang === 'he' ? 'EN' : lang === 'en' ? 'AR' : 'עב'}</span>
         </button>
       </div>
       
