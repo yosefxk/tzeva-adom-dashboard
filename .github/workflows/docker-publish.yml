@@ -93,11 +93,11 @@ jobs:
         env:
           PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
         run: |
-          if [[ ! "$PORTAINER_WEBHOOK_URL" =~ /api/webhooks/ ]]; then
-            echo "::warning::PORTAINER_WEBHOOK_URL does not look like a Portainer webhook endpoint"
+          if [[ ! "$PORTAINER_WEBHOOK_URL" =~ /api/stacks/webhooks/ ]]; then
+            echo "::warning::PORTAINER_WEBHOOK_URL does not look like a Portainer stack webhook endpoint"
           fi
 
-          status_code=$(curl -k -sS -o /tmp/portainer-response.txt -w "%{http_code}" -X POST "$PORTAINER_WEBHOOK_URL" || true)
+          status_code=$(curl -sS -o /tmp/portainer-response.txt -w "%{http_code}" -X POST "$PORTAINER_WEBHOOK_URL" || true)
           echo "HTTP status: $status_code"
 
           if [[ "$status_code" -lt 200 || "$status_code" -ge 300 ]]; then
