@@ -97,7 +97,14 @@ jobs:
             echo "::warning::PORTAINER_WEBHOOK_URL does not look like a Portainer stack webhook endpoint"
           fi
 
-          status_code=$(curl -sS -o /tmp/portainer-response.txt -w "%{http_code}" -X POST "$PORTAINER_WEBHOOK_URL" || true)
+          # Append pullImage=true to force Portainer to pull the fresh GHCR images
+          if [[ "$PORTAINER_WEBHOOK_URL" == *\?* ]]; then
+            url_with_pull="${PORTAINER_WEBHOOK_URL}&pullImage=true"
+          else
+            url_with_pull="${PORTAINER_WEBHOOK_URL}?pullImage=true"
+          fi
+
+          status_code=$(curl -sS -o /tmp/portainer-response.txt -w "%{http_code}" -X POST "$url_with_pull" || true)
           echo "HTTP status: $status_code"
 
           if [[ "$status_code" -lt 200 || "$status_code" -ge 300 ]]; then
