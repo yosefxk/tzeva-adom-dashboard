@@ -405,20 +405,25 @@ export default function App() {
   return (
     <div className="app-container">
       {/* Dynamic language switcher - cycles Hebrew -> English -> Arabic */}
-      <div className="fixed top-4 right-4 z-[9999]" style={{ direction: "ltr" }}>
+      <div style={{ position: 'fixed', top: '16px', right: '16px', zIndex: 9999, direction: 'ltr' }}>
         <button
           onClick={() => {
             const nextL: Record<Language, Language> = { he: 'en', en: 'ar', ar: 'he' };
             setLang(nextL[lang]);
           }}
-          className="glass-panel rounded-lg px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:border-white/20 transition-all inline-block cursor-pointer font-sans"
+          className="glass-panel"
           style={{
             background: 'rgba(24, 24, 27, 0.65)',
             backdropFilter: 'blur(12px)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
             color: '#a1a1aa',
-            fontWeight: 600
+            fontWeight: 600,
+            padding: '6px 10px',
+            fontSize: '0.75rem',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontFamily: 'sans-serif'
           }}
         >
           {lang === 'he' ? '🇺🇸 EN' : lang === 'en' ? '🇸🇦 AR' : '🇮🇱 עב'}
