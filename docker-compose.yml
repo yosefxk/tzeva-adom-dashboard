@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   backend:
-    build: ./backend
+    image: ghcr.io/yosefxk/tzeva-adom-backend:latest
     container_name: tzeva-adom-backend
     restart: unless-stopped
     volumes:
@@ -11,7 +11,7 @@ services:
       - media_network
 
   frontend:
-    build: ./frontend
+    image: ghcr.io/yosefxk/tzeva-adom-frontend:latest
     container_name: tzeva-adom-frontend
     ports:
       - "8082:80"
