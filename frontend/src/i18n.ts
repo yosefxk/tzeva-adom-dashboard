@@ -279,14 +279,67 @@ export function translateThreat(category: number, lang: Language): { title: stri
 export function translateCity(cityRef: string, lang: Language, cities: any[]): string {
   if (!Array.isArray(cities) || cities.length === 0) return cityRef;
   
-  const cleaned = cityRef.split(' - ')[0].trim();
-  const match = cities.find(c => 
-    c.name === cleaned || 
-    c.value === cleaned || 
-    cityRef.includes(c.name) ||
-    c.name_en.toLowerCase() === cleaned.toLowerCase()
+  // Handle citywide rollups
+  if (cityRef.endsWith(' (citywide)')) {
+    const base = cityRef.replace(' (citywide)', '');
+    const ARABIC_ROOTS: Record<string, string> = {
+      'Tel Aviv': 'تل أبيب',
+      'Jerusalem': 'القدس',
+      'Ashdod': 'أشدود',
+      'Beer Sheva': 'بئر السبع',
+      'Haifa': 'حيفا',
+      'Rishon LeZion': 'ريشون لتسيون',
+      'Herzliya': 'هرتسليا',
+      'Hadera': 'الخضيرة',
+      'Netanya': 'نتانيا',
+      'Holon': 'حولون',
+      'Bat Yam': 'بات يام',
+      'Ramat Gan': 'رمات غان',
+      'Petah Tikva': 'بيتاح تكفا',
+    };
+
+    const match = cities.find(c => 
+      c.name_en.toLowerCase() === base.toLowerCase() ||
+      c.name_en.toLowerCase().startsWith(base.toLowerCase() + ' -')
+    );
+
+    if (match) {
+      if (lang === 'en') {
+        const enBase = match.name_en.split(' - ')[0].trim();
+        return `${enBase} (citywide)`;
+      }
+      if (lang === 'ar') {
+        const arBase = ARABIC_ROOTS[base] || (match.name_ar ? match.name_ar.split(/ - |-/)[0].trim() : base);
+        return `${arBase} (شاملة)`;
+      }
+      // Hebrew
+      const heBase = match.name.split(' - ')[0].trim();
+      return `${heBase} (כלל העיר)`;
+    }
+
+    if (lang === 'he') return `${base} (כלל העיר)`;
+    if (lang === 'ar') return `${ARABIC_ROOTS[base] || base} (شاملة)`;
+    return cityRef;
+  }
+
+  // Check if it matches name, value, or name_en exactly
+  let match = cities.find(c => 
+    c.name === cityRef || 
+    c.value === cityRef || 
+    c.name_en.toLowerCase() === cityRef.toLowerCase()
   );
-  
+
+  // Substring fallback
+  if (!match) {
+    const cleaned = cityRef.split(' - ')[0].trim();
+    match = cities.find(c => 
+      c.name === cleaned || 
+      c.value === cleaned || 
+      cityRef.includes(c.name) ||
+      c.name_en.toLowerCase() === cleaned.toLowerCase()
+    );
+  }
+
   if (match) {
     if (lang === 'en') return match.name_en;
     if (lang === 'ar') return match.name_ar || match.name_en;

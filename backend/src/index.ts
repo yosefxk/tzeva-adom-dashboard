@@ -35,8 +35,26 @@ const citiesPath = path.join(__dirname, '../data/cities.json');
 const polygonsPath = path.join(__dirname, '../data/polygons.json');
 
 let citiesCache: CityInfo[] = [];
+const multiAreaRootNames = new Set<string>();
+
+function initMultiAreaRoots() {
+  const rootCounts: Record<string, number> = {};
+  citiesCache.forEach(c => {
+    if (c.name_en) {
+      const rootName = c.name_en.split(' - ')[0].trim();
+      rootCounts[rootName] = (rootCounts[rootName] || 0) + 1;
+    }
+  });
+  Object.entries(rootCounts).forEach(([r, count]) => {
+    if (count > 1) {
+      multiAreaRootNames.add(r);
+    }
+  });
+}
+
 try {
   citiesCache = JSON.parse(fs.readFileSync(citiesPath, 'utf8'));
+  initMultiAreaRoots();
 } catch (err) {
   console.error('Failed to load cities for express routing cache.', err);
 }
@@ -52,7 +70,12 @@ function normalizeString(str: string): string {
 
 function buildSearchFilter(search: string) {
   if (!search) return null;
-  const normSearch = normalizeString(search);
+  const cleanSearch = search
+    .replace(/\s*\(citywide\)\s*/gi, '')
+    .replace(/\s*\(כלל\s+העיר\)\s*/gi, '')
+    .replace(/\s*\(شاملة\)\s*/gi, '')
+    .trim();
+  const normSearch = normalizeString(cleanSearch);
   
   // 1. Check if search term matches a zone name (Hebrew or English)
   const matchedZone = citiesCache.find(c => 
@@ -369,7 +392,18 @@ app.get('/api/alerts/stats', async (req, res) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    const topCities = Object.entries(cityCounts)
+    const rolledUpCityCounts: { [key: string]: number } = {};
+    Object.entries(cityCounts).forEach(([cityKey, count]) => {
+      const rootName = cityKey.split(' - ')[0].trim();
+      if (multiAreaRootNames.has(rootName)) {
+        const rollupKey = `${rootName} (citywide)`;
+        rolledUpCityCounts[rollupKey] = (rolledUpCityCounts[rollupKey] || 0) + count;
+      } else {
+        rolledUpCityCounts[cityKey] = count;
+      }
+    });
+
+    const topCities = Object.entries(rolledUpCityCounts)
       .map(([city, count]) => ({ city, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
