@@ -4,7 +4,7 @@ export const TRANSLATIONS: Record<string, Record<Language, string>> = {
   // Header
   appTitle: { en: 'Red Alerts', he: 'התרעות צבע אדום', ar: 'إنذارات اللون الأحمر' },
   appLive: { en: 'LIVE', he: 'לייב', ar: 'مباشر' },
-  appSubtitle: { en: 'Hosted on BaileyTV', he: 'באירוח BaileyTV', ar: 'مستضاف على BaileyTV' },
+  appSubtitle: { en: 'Sponsored by BaileyTV', he: 'בחסות BaileyTV', ar: 'برعاية BaileyTV' },
   tabRadar: { en: 'Radar Map', he: 'מפת מכ"ם', ar: 'خريطة الرادار' },
   tabLogs: { en: 'Alert Logs', he: 'יומן התרעות', ar: 'سجل الإنذارات' },
   tabStats: { en: 'Data Analytics', he: 'ניתוח נתונים', ar: 'تحليل البيانات' },

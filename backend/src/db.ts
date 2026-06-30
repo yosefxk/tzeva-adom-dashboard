@@ -161,13 +161,13 @@ export function initDatabase() {
   
   // Run backfill migration on startup if needed
   try {
-    const checkLog = db.select().from(schema.syncLogs).where(eq(schema.syncLogs.event, 'canonical_backfill_done')).get();
+    const checkLog = db.select().from(schema.syncLogs).where(eq(schema.syncLogs.event, 'canonical_backfill_v3_done')).get();
     if (!checkLog) {
-      console.log('Running canonical alert_locations migration backfill...');
+      console.log('Running canonical alert_locations migration backfill (v3)...');
       backfillAlertLocations(true);
       db.insert(schema.syncLogs).values({
         timestamp: Date.now(),
-        event: 'canonical_backfill_done',
+        event: 'canonical_backfill_v3_done',
         details: 'Rebuild alert_locations with canonical names from cities.json'
       }).run();
     } else {
