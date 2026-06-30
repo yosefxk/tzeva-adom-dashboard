@@ -108,57 +108,6 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Temporary Database Debug Endpoint
-app.get('/api/debug/db', async (req, res) => {
-  try {
-    const tableList = await db.select({ name: sql<string>`name` }).from(sql`sqlite_master WHERE type='table'`);
-    const alertsCount = await db.select({ count: sql<number>`count(*)` }).from(alerts);
-    let locationsCount = 0;
-    let sampleLocations: any[] = [];
-    let syncLogsList: any[] = [];
-    
-    try {
-      const locRes = await db.select({ count: sql<number>`count(*)` }).from(alertLocations);
-      locationsCount = locRes[0]?.count || 0;
-      sampleLocations = await db.select().from(alertLocations).limit(20);
-    } catch (e: any) {
-      sampleLocations = [{ error: e.message }];
-    }
-
-    try {
-      syncLogsList = await db.select().from(syncLogs).limit(50);
-    } catch (e: any) {
-      syncLogsList = [{ error: e.message }];
-    }
-    
-    let sderotCounts: any[] = [];
-    try {
-      sderotCounts = await db.select({
-        cityName: alertLocations.cityName,
-        count: sql<number>`count(*)`
-      })
-        .from(alertLocations)
-        .where(or(
-          like(alertLocations.cityName, '%שדרות%'),
-          like(alertLocations.cityName, '%איבים%')
-        ))
-        .groupBy(alertLocations.cityName);
-    } catch (e: any) {
-      sderotCounts = [{ error: e.message }];
-    }
-    
-    res.json({
-      tableList,
-      alertsCount,
-      locationsCount,
-      syncLogsList,
-      sampleLocations,
-      sderotCounts
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message, stack: err.stack });
-  }
-});
 
 // Serve Cities coordinates registry
 app.get('/api/cities', (req, res) => {
