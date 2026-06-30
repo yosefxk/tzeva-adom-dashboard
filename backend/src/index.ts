@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { initDatabase, db } from './db.js';
-import { alerts, alertLocations } from './schema.js';
+import { alerts, alertLocations, syncLogs } from './schema.js';
 import { eq, like, and, or, desc, sql, inArray } from 'drizzle-orm';
 import { startPoller, loadRecentAlertIds, resolveLocationData, getCategoryMetadata } from './poller.js';
 import { AlertData, CityInfo } from './types.js';
@@ -106,6 +106,41 @@ app.get('/api/status', (req, res) => {
     clientsConnected: sseClients.length,
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Temporary Database Debug Endpoint
+app.get('/api/debug/db', async (req, res) => {
+  try {
+    const tableList = await db.select({ name: sql<string>`name` }).from(sql`sqlite_master WHERE type='table'`);
+    const alertsCount = await db.select({ count: sql<number>`count(*)` }).from(alerts);
+    let locationsCount = 0;
+    let sampleLocations: any[] = [];
+    let syncLogsList: any[] = [];
+    
+    try {
+      const locRes = await db.select({ count: sql<number>`count(*)` }).from(alertLocations);
+      locationsCount = locRes[0]?.count || 0;
+      sampleLocations = await db.select().from(alertLocations).limit(20);
+    } catch (e: any) {
+      sampleLocations = [{ error: e.message }];
+    }
+
+    try {
+      syncLogsList = await db.select().from(syncLogs).limit(50);
+    } catch (e: any) {
+      syncLogsList = [{ error: e.message }];
+    }
+    
+    res.json({
+      tableList,
+      alertsCount,
+      locationsCount,
+      syncLogsList,
+      sampleLocations
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
 });
 
 // Serve Cities coordinates registry
