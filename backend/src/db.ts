@@ -21,7 +21,7 @@ export const db = drizzle({ client: sqlite, schema });
 
 // Load cities cache helper for mapping locations to zones
 let citiesCache: any[] = [];
-const citiesPath = path.join(dbDir, 'cities.json');
+const citiesPath = path.join(__dirname, '../data/cities.json');
 try {
   if (fs.existsSync(citiesPath)) {
     citiesCache = JSON.parse(fs.readFileSync(citiesPath, 'utf8'));
@@ -161,13 +161,13 @@ export function initDatabase() {
   
   // Run backfill migration on startup if needed
   try {
-    const checkLog = db.select().from(schema.syncLogs).where(eq(schema.syncLogs.event, 'canonical_backfill_v3_done')).get();
+    const checkLog = db.select().from(schema.syncLogs).where(eq(schema.syncLogs.event, 'canonical_backfill_v4_done')).get();
     if (!checkLog) {
-      console.log('Running canonical alert_locations migration backfill (v3)...');
+      console.log('Running canonical alert_locations migration backfill (v4)...');
       backfillAlertLocations(true);
       db.insert(schema.syncLogs).values({
         timestamp: Date.now(),
-        event: 'canonical_backfill_v3_done',
+        event: 'canonical_backfill_v4_done',
         details: 'Rebuild alert_locations with canonical names from cities.json'
       }).run();
     } else {
