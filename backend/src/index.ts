@@ -131,12 +131,29 @@ app.get('/api/debug/db', async (req, res) => {
       syncLogsList = [{ error: e.message }];
     }
     
+    let sderotCounts: any[] = [];
+    try {
+      sderotCounts = await db.select({
+        cityName: alertLocations.cityName,
+        count: sql<number>`count(*)`
+      })
+        .from(alertLocations)
+        .where(or(
+          like(alertLocations.cityName, '%שדרות%'),
+          like(alertLocations.cityName, '%איבים%')
+        ))
+        .groupBy(alertLocations.cityName);
+    } catch (e: any) {
+      sderotCounts = [{ error: e.message }];
+    }
+    
     res.json({
       tableList,
       alertsCount,
       locationsCount,
       syncLogsList,
-      sampleLocations
+      sampleLocations,
+      sderotCounts
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message, stack: err.stack });
