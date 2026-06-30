@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts';
-import { BarChart2, TrendingUp, Award, Search } from 'lucide-react';
+import { BarChart2, TrendingUp, Award, Search, Loader2 } from 'lucide-react';
 import { t, translateCity, translateThreat, translateZone } from '../i18n';
 import type { Language } from '../i18n';
 
@@ -74,12 +74,23 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
   // Filter States
   const [category, setCategory] = useState<string>('');
   const [search, setSearch] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
   // Autocomplete Suggestions State
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Debounce search term changes by 500ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [search]);
 
   useEffect(() => {
     if (!search.trim()) {
@@ -147,14 +158,16 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
   const handleSelectSuggestion = (item: any) => {
     const nameToSet = lang === 'en' ? item.name_en : item.name;
     setSearch(nameToSet);
+    setDebouncedSearch(nameToSet); // set immediately on selection to bypass debounce delay
     setShowSuggestions(false);
   };
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
     const params: any = {};
     if (category) params.category = category;
-    if (search) params.search = search;
+    if (debouncedSearch) params.search = debouncedSearch;
     
     if (startDate) {
       params.startTimestamp = new Date(startDate).getTime();
@@ -167,19 +180,28 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
 
     axios.get('/api/alerts/stats', { params })
       .then(res => {
-        setStats(res.data);
+        if (active) {
+          setStats(res.data);
+        }
       })
       .catch(err => {
         console.error('Failed to query statistics summary.', err);
       })
       .finally(() => {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       });
-  }, [category, search, startDate, endDate]);
+
+    return () => {
+      active = false;
+    };
+  }, [category, debouncedSearch, startDate, endDate]);
 
   const handleResetFilters = () => {
     setCategory('');
     setSearch('');
+    setDebouncedSearch('');
     setStartDate('');
     setEndDate('');
   };
@@ -212,6 +234,8 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
     label: translateThreat(cat.category, lang).title
   }));
 
+  const isQueryPending = loading || search !== debouncedSearch;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
@@ -232,13 +256,23 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{t('filterSearchCity', lang)}</label>
           <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ 
-              position: 'absolute', 
-              left: (lang === 'he' || lang === 'ar') ? 'auto' : '10px', 
-              right: (lang === 'he' || lang === 'ar') ? '10px' : 'auto', 
-              top: '12px', 
-              color: 'var(--text-muted)' 
-            }} />
+            {isQueryPending ? (
+              <Loader2 size={16} className="spin" style={{ 
+                position: 'absolute', 
+                left: (lang === 'he' || lang === 'ar') ? 'auto' : '10px', 
+                right: (lang === 'he' || lang === 'ar') ? '10px' : 'auto', 
+                top: '12px', 
+                color: 'var(--accent-red)' 
+              }} />
+            ) : (
+              <Search size={16} style={{ 
+                position: 'absolute', 
+                left: (lang === 'he' || lang === 'ar') ? 'auto' : '10px', 
+                right: (lang === 'he' || lang === 'ar') ? '10px' : 'auto', 
+                top: '12px', 
+                color: 'var(--text-muted)' 
+              }} />
+            )}
             <input 
               type="text" 
               placeholder={t('placeholderSearch', lang)} 

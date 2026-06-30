@@ -54,7 +54,17 @@ function FlagIcon({ country }: { country: "us" | "il" | "sa" }) {
       <rect width="74" height="50" fill="#b22234"/>
       <path d="M0,3.8h74M0,11.5h74M0,19.2h74M0,26.9h74M0,34.6h74M0,42.3h74" stroke="white" strokeWidth="3.8"/>
       <rect width="32" height="27" fill="#3c3b6e"/>
-      <text x="16" y="20" fontSize="18" fill="white" textAnchor="middle" fontFamily="sans-serif">★</text>
+      <g fill="white" fontSize="5" fontFamily="sans-serif" textAnchor="middle">
+        <text x="6" y="9">★</text>
+        <text x="14" y="9">★</text>
+        <text x="22" y="9">★</text>
+        <text x="10" y="16">★</text>
+        <text x="18" y="16">★</text>
+        <text x="26" y="16">★</text>
+        <text x="6" y="23">★</text>
+        <text x="14" y="23">★</text>
+        <text x="22" y="23">★</text>
+      </g>
     </svg>
   );
 }
@@ -434,35 +444,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Dynamic language switcher - cycles Hebrew -> English -> Arabic */}
-      <div style={{ position: 'fixed', top: '16px', right: '16px', zIndex: 9999, direction: 'ltr' }}>
-        <button
-          onClick={() => {
-            const nextL: Record<Language, Language> = { he: 'en', en: 'ar', ar: 'he' };
-            setLang(nextL[lang]);
-          }}
-          className="glass-panel"
-          style={{
-            background: 'rgba(24, 24, 27, 0.65)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
-            color: '#a1a1aa',
-            fontWeight: 600,
-            padding: '6px 10px',
-            fontSize: '0.75rem',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontFamily: 'sans-serif',
-            display: 'inline-flex',
-            alignItems: 'center'
-          }}
-        >
-          <FlagIcon country={lang === 'he' ? 'us' : lang === 'en' ? 'sa' : 'il'} />
-          <span>{lang === 'he' ? 'EN' : lang === 'en' ? 'AR' : 'עב'}</span>
-        </button>
-      </div>
-      
+
       {/* HEADER SECTION */}
       <header className="app-header">
         <div className="app-header-brand">
@@ -538,30 +520,53 @@ export default function App() {
             </button>
           )}
 
-          {/* Theme Toggle Button (Desktop only) */}
-          {!isMobile && (
-            <button
-              onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
-              style={{
-                padding: '6px 10px',
-                fontSize: '0.8rem',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid var(--border-glass)',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontWeight: 600
-              }}
-              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-            >
-              {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
-              <span className="desktop-only">
-                {theme === 'light' ? t('themeDark', lang) : t('themeLight', lang)}
-              </span>
-            </button>
-          )}
+          {/* Language Switcher */}
+          <button
+            onClick={() => {
+              const nextL: Record<Language, Language> = { he: 'en', en: 'ar', ar: 'he' };
+              setLang(nextL[lang]);
+            }}
+            style={{
+              padding: '6px 10px',
+              fontSize: '0.8rem',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              direction: 'ltr'
+            }}
+          >
+            <FlagIcon country={lang === 'he' ? 'us' : lang === 'en' ? 'sa' : 'il'} />
+            <span>{lang === 'he' ? 'EN' : lang === 'en' ? 'AR' : 'עב'}</span>
+          </button>
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+            style={{
+              padding: '6px 10px',
+              fontSize: '0.8rem',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: 600
+            }}
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          >
+            {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+            <span className="desktop-only">
+              {theme === 'light' ? t('themeDark', lang) : t('themeLight', lang)}
+            </span>
+          </button>
 
 
 
