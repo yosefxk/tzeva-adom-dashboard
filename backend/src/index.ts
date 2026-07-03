@@ -370,8 +370,8 @@ app.get('/api/alerts/stats', async (req, res) => {
 
     const cleanSearch = search
       .replace(/\s*\(citywide\)\s*/gi, '')
-      .replace(/\s*\(כלל\s+העיר\)\s*/gi, '')
-      .replace(/\s*\(شاملة\)\s*/gi, '')
+      .replace(new RegExp('\\s*\\u0028\\u05DB\\u05DC\\u05DC\\s+\\u05D4\\u05E2\\u05D9\\u05E8\\u0029\\s*', 'gi'), '')
+      .replace(new RegExp('\\s*\\u0028\\u0634\\u0627\\u0645\\u0644\\u0629\\u0029\\s*', 'gi'), '')
       .trim();
     const normSearch = normalizeString(cleanSearch);
 
@@ -390,7 +390,10 @@ app.get('/api/alerts/stats', async (req, res) => {
 
       if (normSearch) {
         locations = locations.filter(loc => {
-          const c = citiesCache.find(x => x.name === loc || x.value === loc);
+          let c = citiesCache.find(x => x.name === loc || x.value === loc);
+          if (!c) {
+            c = citiesCache.find(x => x.name.includes(loc) || x.value.includes(loc));
+          }
           if (!c) return false;
           if (matchedZone && matchedZone.zone) {
              return c.zone === matchedZone.zone;
