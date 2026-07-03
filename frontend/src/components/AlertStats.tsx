@@ -7,6 +7,7 @@ import {
 import { BarChart2, TrendingUp, Award, Search, Loader2 } from 'lucide-react';
 import { t, translateCity, translateThreat, translateZone } from '../i18n';
 import type { Language } from '../i18n';
+import TopCitiesLeaderboard from './TopCitiesLeaderboard';
 
 interface CategoryStats {
   category: number;
@@ -466,6 +467,11 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
       {/* Main Charts Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
         
+        {/* Dynamic Leaderboard Panel */}
+        <div style={{ gridColumn: '1 / -1' }}>
+          <TopCitiesLeaderboard lang={lang} cities={cities} onCityClick={setSearch} />
+        </div>
+
         {/* Categories Distribution Donut */}
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
