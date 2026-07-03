@@ -132,6 +132,57 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
 
     // 2. Find matching cities
     const matchingCities: any[] = [];
+    
+    // Calculate multi-area cities to add citywide rollups
+    const rootCounts = new Map<string, any[]>();
+    cities.forEach(c => {
+      const enName = c.name_en || '';
+      const rootName = enName.split(' - ')[0].trim();
+      if (!rootCounts.has(rootName)) rootCounts.set(rootName, []);
+      rootCounts.get(rootName)!.push(c);
+    });
+
+    const ARABIC_ROOTS: Record<string, string> = {
+      'Tel Aviv': 'تل أبيب',
+      'Jerusalem': 'القدس',
+      'Ashdod': 'أشدود',
+      'Beer Sheva': 'بئر السبع',
+      'Haifa': 'حيفا',
+      'Rishon LeZion': 'ريشون لتسيون',
+      'Herzliya': 'هرتسليا',
+      'Hadera': 'الخضيرة',
+      'Netanya': 'نتانيا',
+      'Holon': 'حولون',
+      'Bat Yam': 'بات يام',
+      'Ramat Gan': 'رمات غان',
+      'Petah Tikva': 'بيتاح تكفا',
+    };
+
+    rootCounts.forEach((areas, root) => {
+      if (areas.length > 1) {
+        const rep = areas[0];
+        const heRoot = rep.name.split(' - ')[0].trim();
+        const arRoot = ARABIC_ROOTS[root] || (rep.name_ar ? rep.name_ar.split(/ - |-/)[0].trim() : root);
+        
+        const normEn = normalizeString(root);
+        const normHe = normalizeString(heRoot);
+        const normAr = normalizeString(arRoot);
+
+        if (normEn.includes(query) || normHe.includes(query) || normAr.includes(query)) {
+          matchingCities.push({
+            type: 'city',
+            id: `rollup-${root}`,
+            name: `${heRoot} (כלל העיר)`,
+            name_en: `${root} (citywide)`,
+            name_ar: `${arRoot} (شاملة)`,
+            zone: rep.zone,
+            zone_en: rep.zone_en,
+            value: `${root} (citywide)`
+          });
+        }
+      }
+    });
+
     cities.forEach(c => {
       const nameNorm = normalizeString(c.name);
       const nameEnNorm = normalizeString(c.name_en);
