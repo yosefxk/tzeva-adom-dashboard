@@ -368,6 +368,18 @@ app.get('/api/alerts/stats', async (req, res) => {
     const zoneCounts: { [key: string]: number } = {};
     const cityCounts: { [key: string]: number } = {};
 
+    const cleanSearch = search
+      .replace(/\s*\(citywide\)\s*/gi, '')
+      .replace(/\s*\(כלל\s+העיר\)\s*/gi, '')
+      .replace(/\s*\(شاملة\)\s*/gi, '')
+      .trim();
+    const normSearch = normalizeString(cleanSearch);
+
+    const matchedZone = search ? citiesCache.find(c => 
+      (c.zone_en && normalizeString(c.zone_en) === normSearch) ||
+      (c.zone && normalizeString(c.zone) === normSearch)
+    ) : null;
+
     allAlerts.forEach((row: any) => {
       let locations: string[] = [];
       try {
@@ -375,6 +387,23 @@ app.get('/api/alerts/stats', async (req, res) => {
       } catch {
         locations = [row.locations];
       }
+
+      if (normSearch) {
+        locations = locations.filter(loc => {
+          const c = citiesCache.find(x => x.name === loc || x.value === loc);
+          if (!c) return false;
+          if (matchedZone && matchedZone.zone) {
+             return c.zone === matchedZone.zone;
+          } else {
+             const nameNorm = normalizeString(c.name);
+             const nameEnNorm = normalizeString(c.name_en || '');
+             const nameArNorm = normalizeString(c.name_ar || '');
+             return nameNorm.includes(normSearch) || nameEnNorm.includes(normSearch) || nameArNorm.includes(normSearch);
+          }
+        });
+      }
+
+      if (locations.length === 0) return;
 
       const enrichment = resolveLocationData(locations);
       
