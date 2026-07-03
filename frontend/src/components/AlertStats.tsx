@@ -508,10 +508,17 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ background: 'var(--bg-card)', borderColor: 'var(--border-glass)', borderRadius: '8px' }}
+                    contentStyle={{ 
+                      background: 'var(--bg-card)', 
+                      borderColor: 'var(--border-glass)', 
+                      borderRadius: '8px',
+                      direction: (lang === 'he' || lang === 'ar') ? 'rtl' : 'ltr',
+                      textAlign: (lang === 'he' || lang === 'ar') ? 'right' : 'left'
+                    }}
                     itemStyle={{ color: 'var(--text-primary)' }}
-                    labelStyle={{ color: 'var(--text-primary)' }}
-                    formatter={(value: any) => [Number(value).toLocaleString(lang), '']}
+                    labelStyle={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: 'bold' }}
+                    separator=""
+                    formatter={(value: any) => [`${Number(value).toLocaleString(lang)} ${t('alertsUnit', lang)}`, '']}
                   />
                   <Legend verticalAlign="bottom" height={36} formatter={(value) => <span style={{ color: 'var(--text-primary)', fontSize: '0.82rem' }}>{value}</span>} />
                 </PieChart>
@@ -532,11 +539,18 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
                 <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  contentStyle={{ background: 'var(--bg-card)', borderColor: 'var(--border-glass)', borderRadius: '8px' }} 
+                  contentStyle={{ 
+                    background: 'var(--bg-card)', 
+                    borderColor: 'var(--border-glass)', 
+                    borderRadius: '8px',
+                    direction: (lang === 'he' || lang === 'ar') ? 'rtl' : 'ltr',
+                    textAlign: (lang === 'he' || lang === 'ar') ? 'right' : 'left'
+                  }} 
                   itemStyle={{ color: 'var(--text-primary)' }}
-                  labelStyle={{ color: 'var(--text-primary)' }}
+                  labelStyle={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: 'bold' }}
                   cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                  formatter={(value: any) => [Number(value).toLocaleString(lang), '']}
+                  separator=""
+                  formatter={(value: any, name: any) => [`${Number(value).toLocaleString(lang)} ${name}`, '']}
                 />
                 <Bar dataKey="alerts" name={t('alertsUnit', lang)} fill="var(--accent-red)" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -556,11 +570,18 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
                 <XAxis dataKey="dayName" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  contentStyle={{ background: 'var(--bg-card)', borderColor: 'var(--border-glass)', borderRadius: '8px' }} 
+                  contentStyle={{ 
+                    background: 'var(--bg-card)', 
+                    borderColor: 'var(--border-glass)', 
+                    borderRadius: '8px',
+                    direction: (lang === 'he' || lang === 'ar') ? 'rtl' : 'ltr',
+                    textAlign: (lang === 'he' || lang === 'ar') ? 'right' : 'left'
+                  }} 
                   itemStyle={{ color: 'var(--text-primary)' }}
-                  labelStyle={{ color: 'var(--text-primary)' }}
+                  labelStyle={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: 'bold' }}
                   cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                  formatter={(value: any) => [Number(value).toLocaleString(lang), '']}
+                  separator=""
+                  formatter={(value: any, name: any) => [`${Number(value).toLocaleString(lang)} ${name}`, '']}
                 />
                 <Bar dataKey="alerts" name={t('alertsUnit', lang)} fill="var(--accent-orange)" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -586,10 +607,17 @@ export default function AlertStats({ lang, cities }: AlertStatsProps) {
                 <XAxis dataKey="year" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  contentStyle={{ background: 'var(--bg-card)', borderColor: 'var(--border-glass)', borderRadius: '8px' }} 
+                  contentStyle={{ 
+                    background: 'var(--bg-card)', 
+                    borderColor: 'var(--border-glass)', 
+                    borderRadius: '8px',
+                    direction: (lang === 'he' || lang === 'ar') ? 'rtl' : 'ltr',
+                    textAlign: (lang === 'he' || lang === 'ar') ? 'right' : 'left'
+                  }} 
                   itemStyle={{ color: 'var(--text-primary)' }}
-                  labelStyle={{ color: 'var(--text-primary)' }}
-                  formatter={(value: any) => [Number(value).toLocaleString(lang), '']}
+                  labelStyle={{ color: 'var(--text-primary)', marginBottom: '4px', fontWeight: 'bold' }}
+                  separator=""
+                  formatter={(value: any, name: any) => [`${Number(value).toLocaleString(lang)} ${name}`, '']}
                 />
                 <Area type="monotone" dataKey="count" name={t('alertsUnit', lang)} stroke="var(--accent-blue)" fillOpacity={1} fill="url(#colorCount)" strokeWidth={2} />
               </AreaChart>
