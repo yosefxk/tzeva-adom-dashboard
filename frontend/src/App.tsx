@@ -280,29 +280,6 @@ export default function App() {
       });
   }, []);
 
-  // Carto API Key for basemap tiles
-  const [cartoApiKey, setCartoApiKey] = useState<string>(() => {
-    const windowKey = (window as any).__CONFIG__?.CARTO_API_KEY;
-    if (windowKey && windowKey !== '__CARTO_API_KEY__') {
-      return windowKey;
-    }
-    return import.meta.env.VITE_CARTO_API_KEY || (window as any).__CARTO_API_KEY__ || '';
-  });
-
-  // Fetch runtime config on startup from backend API
-  useEffect(() => {
-    fetch('/api/config')
-      .then(res => res.json())
-      .then(cfg => {
-        if (cfg?.cartoApiKey) {
-          setCartoApiKey(cfg.cartoApiKey);
-        }
-      })
-      .catch(err => {
-        console.warn('Could not load runtime config from /api/config', err);
-      });
-  }, []);
-
   // References for SSE loop to prevent stream reconnection on settings changes
   const soundModeRef = useRef(soundMode);
   const volumeRef = useRef(volume);
@@ -650,7 +627,7 @@ export default function App() {
         {activeTab === 'map' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', flex: 1, minHeight: 0 }}>
             <div className="glass-panel" style={{ padding: '8px', overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              <AlertMap activeAlerts={activeAlerts} lang={lang} cities={cities} theme={theme} cartoApiKey={cartoApiKey} />
+              <AlertMap activeAlerts={activeAlerts} lang={lang} cities={cities} theme={theme} />
             </div>
             
             {activeAlerts.length > 0 && (
@@ -698,7 +675,7 @@ export default function App() {
 
         {activeTab === 'heatmap' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <AlertHeatmap lang={lang} cities={cities} theme={theme} cartoApiKey={cartoApiKey} />
+            <AlertHeatmap lang={lang} cities={cities} theme={theme} />
           </div>
         )}
       </main>

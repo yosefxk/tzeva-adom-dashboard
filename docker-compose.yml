@@ -17,8 +17,6 @@ services:
     container_name: tzeva-adom-frontend
     ports:
       - "8082:80"
-    environment:
-      - CARTO_API_KEY=${CARTO_API_KEY:-}
     depends_on:
       - backend
     restart: unless-stopped

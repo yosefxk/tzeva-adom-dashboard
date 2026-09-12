@@ -29,21 +29,6 @@ interface AlertMapProps {
   lang: Language;
   cities: any[];
   theme: 'light' | 'dark';
-  cartoApiKey?: string;
-}
-
-export function getCartoTileUrl(theme: 'light' | 'dark', apiKey?: string) {
-  const windowKey = (window as any).__CONFIG__?.CARTO_API_KEY;
-  const resolvedKey = apiKey || 
-    (windowKey && windowKey !== '__CARTO_API_KEY__' ? windowKey : '') || 
-    (import.meta as any).env?.VITE_CARTO_API_KEY || 
-    (window as any).__CARTO_API_KEY__ || '';
-
-  const baseUrl = theme === 'light'
-    ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-
-  return resolvedKey ? `${baseUrl}?key=${resolvedKey}` : baseUrl;
 }
 
 const ISRAEL_CENTER = { lat: 31.7683, lng: 35.2137 };
@@ -64,7 +49,7 @@ function MapController({ activeAlerts }: { activeAlerts: ActiveAlert[] }) {
   return null;
 }
 
-export default function AlertMap({ activeAlerts, lang, cities, theme, cartoApiKey }: AlertMapProps) {
+export default function AlertMap({ activeAlerts, lang, cities, theme }: AlertMapProps) {
   const [polygonsRegistry, setPolygonsRegistry] = useState<{ [key: string]: [number, number][] }>({});
 
   // Load polygons GeoJSON database on startup
@@ -120,7 +105,7 @@ export default function AlertMap({ activeAlerts, lang, cities, theme, cartoApiKe
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer
-          url={getCartoTileUrl(theme, cartoApiKey)}
+          url={`/api/tiles/${theme === 'light' ? 'light_all' : 'dark_all'}/{z}/{x}/{y}{r}.png`}
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         />
 

@@ -119,8 +119,6 @@ services:
     container_name: tzeva-adom-frontend
     ports:
       - "8082:80"
-    environment:
-      - CARTO_API_KEY=${CARTO_API_KEY:-}
     depends_on:
       - tzeva-adom-backend
     restart: unless-stopped
@@ -138,9 +136,9 @@ networks:
 
 #### Environment Variables
 
-| Variable | Description |
-| :--- | :--- |
-| `CARTO_API_KEY` | CARTO Basemaps API key to remove the "API KEY REQUIRED" watermark from radar map tiles. Free keys can be requested at [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey). |
+| Variable | Service | Description |
+| :--- | :--- | :--- |
+| `CARTO_API_KEY` | `backend` | Private CARTO Basemaps API key. The backend securely reverse-proxies map tiles via `/api/tiles/...`, ensuring this key is **never** exposed to client browsers. Free keys can be requested at [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey). |
 
 ### Local Docker Build
 

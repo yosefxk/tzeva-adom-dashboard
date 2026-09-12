@@ -131,11 +131,60 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// App runtime public configurations
-app.get('/api/config', (req, res) => {
-  res.json({
-    cartoApiKey: process.env.CARTO_API_KEY || ''
-  });
+// Secure reverse-proxy for Carto map tiles (protects CARTO_API_KEY from ever being exposed to clients)
+const ALLOWED_TILE_STYLES = new Set(['light_all', 'dark_all']);
+const TILE_SUBDOMAINS = ['a', 'b', 'c', 'd'];
+const tileCache = new Map<string, { buffer: Buffer; contentType: string }>();
+const MAX_CACHE_TILES = 1500;
+
+app.get('/api/tiles/:style/:z/:x/:tileFile', async (req, res) => {
+  const { style, z, x, tileFile } = req.params;
+
+  if (!ALLOWED_TILE_STYLES.has(style)) {
+    return res.status(400).send('Invalid map style');
+  }
+
+  // Strictly validate zoom, coordinates, and file name format (e.g. 106.png or 106@2x.png)
+  if (!/^\d+$/.test(z) || !/^\d+$/.test(x) || !/^\d+(@2x)?\.png$/.test(tileFile)) {
+    return res.status(400).send('Invalid tile coordinates');
+  }
+
+  const cacheKey = `${style}/${z}/${x}/${tileFile}`;
+  const cached = tileCache.get(cacheKey);
+  if (cached) {
+    res.setHeader('Content-Type', cached.contentType);
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    return res.send(cached.buffer);
+  }
+
+  const sub = TILE_SUBDOMAINS[Math.floor(Math.random() * TILE_SUBDOMAINS.length)];
+  const apiKey = process.env.CARTO_API_KEY;
+  const query = apiKey ? `?key=${encodeURIComponent(apiKey)}` : '';
+  const targetUrl = `https://${sub}.basemaps.cartocdn.com/${style}/${z}/${x}/${tileFile}${query}`;
+
+  try {
+    const upstreamRes = await fetch(targetUrl);
+    if (!upstreamRes.ok) {
+      return res.status(upstreamRes.status).send('Failed to fetch map tile');
+    }
+
+    const contentType = upstreamRes.headers.get('content-type') || 'image/png';
+    const arrayBuffer = await upstreamRes.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    if (tileCache.size >= MAX_CACHE_TILES) {
+      const firstKey = tileCache.keys().next().value;
+      if (firstKey) tileCache.delete(firstKey);
+    }
+    tileCache.set(cacheKey, { buffer, contentType });
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    res.send(buffer);
+  } catch (err: any) {
+    console.error('Tile proxy error:', err);
+    res.status(502).send('Error proxying map tile');
+  }
 });
 
 
