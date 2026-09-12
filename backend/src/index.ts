@@ -131,6 +131,13 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// App runtime public configurations
+app.get('/api/config', (req, res) => {
+  res.json({
+    cartoApiKey: process.env.CARTO_API_KEY || ''
+  });
+});
+
 
 // Serve Cities coordinates registry
 app.get('/api/cities', (req, res) => {

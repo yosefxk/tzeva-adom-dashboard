@@ -107,6 +107,8 @@ services:
     image: ghcr.io/yosefxk/tzeva-adom-backend:latest
     container_name: tzeva-adom-backend
     restart: unless-stopped
+    environment:
+      - CARTO_API_KEY=${CARTO_API_KEY:-}
     volumes:
       - alert_radar_data:/app/database
     networks:
@@ -117,6 +119,8 @@ services:
     container_name: tzeva-adom-frontend
     ports:
       - "8082:80"
+    environment:
+      - CARTO_API_KEY=${CARTO_API_KEY:-}
     depends_on:
       - tzeva-adom-backend
     restart: unless-stopped
@@ -131,6 +135,12 @@ networks:
   media_network:
     external: true
 ```
+
+#### Environment Variables
+
+| Variable | Description |
+| :--- | :--- |
+| `CARTO_API_KEY` | CARTO Basemaps API key to remove the "API KEY REQUIRED" watermark from radar map tiles. Free keys can be requested at [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey). |
 
 ### Local Docker Build
 

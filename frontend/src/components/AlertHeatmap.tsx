@@ -5,18 +5,20 @@ import axios from 'axios';
 import { RefreshCw } from 'lucide-react';
 import { t, translateZone } from '../i18n';
 import type { Language } from '../i18n';
+import { getCartoTileUrl } from './AlertMap';
 
 interface AlertHeatmapProps {
   lang: Language;
   cities: any[];
   theme: 'light' | 'dark';
+  cartoApiKey?: string;
 }
 
 const ISRAEL_CENTER = { lat: 31.7683, lng: 35.2137 };
 
 type PresetRange = 'day' | 'week' | 'month' | 'year' | 'custom';
 
-export default function AlertHeatmap({ lang, cities, theme }: AlertHeatmapProps) {
+export default function AlertHeatmap({ lang, cities, theme, cartoApiKey }: AlertHeatmapProps) {
   const [preset, setPreset] = useState<PresetRange>('week');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -231,10 +233,7 @@ export default function AlertHeatmap({ lang, cities, theme }: AlertHeatmapProps)
           style={{ height: '100%', width: '100%', borderRadius: '12px' }}
         >
           <TileLayer
-            url={theme === 'light' 
-              ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-              : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            }
+            url={getCartoTileUrl(theme, cartoApiKey)}
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           />
 
