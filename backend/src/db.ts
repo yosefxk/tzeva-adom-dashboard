@@ -16,6 +16,8 @@ if (!fs.existsSync(dbDir)) {
 
 const dbPath = path.join(dbDir, 'alerts.db');
 const sqlite = new DatabaseSync(dbPath);
+sqlite.exec('PRAGMA journal_mode = WAL;');
+sqlite.exec('PRAGMA synchronous = NORMAL;');
 
 export const db = drizzle({ client: sqlite, schema });
 
@@ -31,9 +33,23 @@ try {
 }
 
 const cityToZone = new Map<string, string>();
+const cityByName = new Map<string, any>();
+const cityByValue = new Map<string, any>();
+
 citiesCache.forEach(c => {
   if (c.name) {
     cityToZone.set(c.name, c.zone || '');
+    cityByName.set(c.name, c);
+    const subParts = c.name.split(',');
+    if (subParts.length > 1) {
+      subParts.forEach((sp: string) => {
+        const tr = sp.trim();
+        if (tr && !cityByName.has(tr)) cityByName.set(tr, c);
+      });
+    }
+  }
+  if (c.value) {
+    cityByValue.set(c.value, c);
   }
 });
 
@@ -42,19 +58,30 @@ export function getCanonicalCityName(rawName: string): string {
   const trimmed = rawName.trim();
   if (!trimmed) return rawName;
 
-  // 1. Exact match
-  let match = citiesCache.find(c => c.name === trimmed || c.value === trimmed);
+  // 1. Exact match via Map lookup
+  let match = cityByName.get(trimmed) || cityByValue.get(trimmed);
   if (match) return match.name;
 
   // 2. Substring dash match
-  const parts = trimmed.split(' - ');
-  const mainName = parts[0].trim();
-  match = citiesCache.find(c => c.name === mainName || c.value === mainName);
-  if (match) return match.name;
+  if (trimmed.includes(' - ')) {
+    const parts = trimmed.split(' - ');
+    const mainName = parts[0].trim();
+    match = cityByName.get(mainName) || cityByValue.get(mainName);
+    if (match) return match.name;
+  }
 
-  // 3. Fuzzy substring match (contains)
-  match = citiesCache.find(c => trimmed.includes(c.name) || c.name.includes(trimmed));
-  if (match) return match.name;
+  // 3. Fallback to longest substring match to avoid short prefix collision
+  let bestMatch: any = null;
+  let maxLen = 0;
+  for (const c of citiesCache) {
+    if (c.name && (trimmed.includes(c.name) || c.name.includes(trimmed))) {
+      if (c.name.length > maxLen) {
+        maxLen = c.name.length;
+        bestMatch = c;
+      }
+    }
+  }
+  if (bestMatch) return bestMatch.name;
 
   return trimmed; // fallback to raw
 }

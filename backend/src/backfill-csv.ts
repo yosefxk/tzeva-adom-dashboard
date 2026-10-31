@@ -82,8 +82,6 @@ interface GroupedAlert {
 }
 
 export async function runCsvBackfill() {
-  initDatabase();
-
   console.log('Downloading alarms.csv historical archive from yuval-harpaz/alarms (16.5MB)...');
   const csvUrl = 'https://raw.githubusercontent.com/yuval-harpaz/alarms/master/data/alarms.csv';
   
@@ -197,6 +195,7 @@ export async function runCsvBackfill() {
       });
       inserted += insertBuffer.length;
       insertBuffer.length = 0; // Clear buffer
+      await new Promise(r => setImmediate(r)); // Yield to event loop
 
       if (inserted % 2500 === 0 || idx === allGroups.length - 1) {
         console.log(`[Database Sync] Saved ${inserted} / ${allGroups.length} alert events.`);
@@ -217,6 +216,7 @@ const isMain = process.argv[1] && (
 );
 
 if (isMain) {
+  initDatabase();
   runCsvBackfill().catch(err => {
     console.error('Fatal CSV backfill failure.', err);
   });

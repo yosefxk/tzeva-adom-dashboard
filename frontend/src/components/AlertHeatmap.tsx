@@ -115,7 +115,19 @@ export default function AlertHeatmap({ lang, cities, theme }: AlertHeatmapProps)
   Object.entries(heatmapCounts).forEach(([hebName, count]) => {
     // Match db name to preloaded cities catalog
     const cleaned = hebName.split(' - ')[0].trim();
-    const city = cities.find(c => c.name === cleaned || c.value === cleaned || hebName.includes(c.name));
+    let city = cities.find(c => 
+      c.name === hebName || 
+      c.value === hebName || 
+      c.name === cleaned || 
+      c.value === cleaned ||
+      c.name.split(',')[0].trim() === cleaned ||
+      hebName.split(',')[0].trim() === c.name
+    );
+    if (!city) {
+      city = cities
+        .filter(c => c.name && hebName.includes(c.name))
+        .sort((a, b) => b.name.length - a.name.length)[0];
+    }
 
     if (city) {
       heatmapFeatures.push({

@@ -365,11 +365,19 @@ export default function App() {
             if (currentSoundMode === 'custom' && currentSubscribed.length > 0) {
               isTargeted = alert.locations.some(loc => {
                 const cleaned = loc.split(' - ')[0].trim();
-                const cityMatch = currentCities.find(c => 
+                let cityMatch = currentCities.find(c => 
+                  c.name === loc || 
+                  c.value === loc || 
                   c.name === cleaned || 
-                  c.value === cleaned || 
-                  loc.includes(c.name)
+                  c.value === cleaned ||
+                  c.name.split(',')[0].trim() === cleaned ||
+                  loc.split(',')[0].trim() === c.name
                 );
+                if (!cityMatch) {
+                  cityMatch = currentCities
+                    .filter(c => c.name && loc.includes(c.name))
+                    .sort((a, b) => b.name.length - a.name.length)[0];
+                }
                 if (!cityMatch) return false;
                 
                 return currentSubscribed.some(sub => {
@@ -402,9 +410,11 @@ export default function App() {
 
             // 2. HTML5 desktop push notifications
             if ('Notification' in window && Notification.permission === 'granted') {
-              // Resolve notification text in chosen language
-              const localizedTitle = lang === 'he' ? alert.title : (lang === 'ar' ? 'إنذار طوارئ' : 'Emergency Alert');
-              const resolvedCities = alert.locations.map(loc => translateCity(loc, lang, cities)).join(', ');
+              // Resolve notification text in chosen language using live refs
+              const currentLang = langRef.current;
+              const currentCitiesForNotif = citiesRef.current;
+              const localizedTitle = currentLang === 'he' ? alert.title : (currentLang === 'ar' ? 'إنذار طوارئ' : 'Emergency Alert');
+              const resolvedCities = alert.locations.map(loc => translateCity(loc, currentLang, currentCitiesForNotif)).join(', ');
               
               new Notification(`🚨 ${localizedTitle}`, {
                 body: `${resolvedCities}\nCountdown: ${alert.countdown}s`,

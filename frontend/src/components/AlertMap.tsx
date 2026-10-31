@@ -76,7 +76,19 @@ export default function AlertMap({ activeAlerts, lang, cities, theme }: AlertMap
   activeAlerts.forEach(alert => {
     alert.locations.forEach(locName => {
       const cleaned = locName.split(' - ')[0].trim();
-      const match = cities.find(c => c.name === cleaned || c.value === cleaned || locName.includes(c.name));
+      let match = cities.find(c => 
+        c.name === locName || 
+        c.value === locName || 
+        c.name === cleaned || 
+        c.value === cleaned ||
+        c.name.split(',')[0].trim() === cleaned ||
+        locName.split(',')[0].trim() === c.name
+      );
+      if (!match) {
+        match = cities
+          .filter(c => c.name && locName.includes(c.name))
+          .sort((a, b) => b.name.length - a.name.length)[0];
+      }
       if (match && polygonsRegistry[match.id]) {
         activeAlertPolygons.push({
           alertId: alert.id,

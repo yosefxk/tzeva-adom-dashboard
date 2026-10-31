@@ -13,10 +13,27 @@ const __dirname = path.dirname(__filename);
 // Load cities database
 const citiesPath = path.join(__dirname, '../data/cities.json');
 let cities: CityInfo[] = [];
+export const cityByName = new Map<string, CityInfo>();
+export const cityByValue = new Map<string, CityInfo>();
+export const cityByNameEn = new Map<string, CityInfo>();
 
 try {
   const fileData = fs.readFileSync(citiesPath, 'utf8');
   cities = JSON.parse(fileData);
+  cities.forEach(c => {
+    if (c.name) {
+      cityByName.set(c.name, c);
+      const subParts = c.name.split(',');
+      if (subParts.length > 1) {
+        subParts.forEach((sp: string) => {
+          const tr = sp.trim();
+          if (tr && !cityByName.has(tr)) cityByName.set(tr, c);
+        });
+      }
+    }
+    if (c.value) cityByValue.set(c.value, c);
+    if (c.name_en) cityByNameEn.set(c.name_en.toLowerCase(), c);
+  });
   console.log(`Loaded ${cities.length} cities from database.`);
 } catch (err) {
   console.error('Failed to load cities.json database. Live mapping will be limited.', err);
@@ -89,19 +106,29 @@ export function resolveLocationData(locationsHebrew: string[]): {
     const trimmedLoc = loc.trim();
     if (!trimmedLoc) continue;
 
-    // Search matches in cities.json
-    let match = cities.find(c => c.name === trimmedLoc || c.value === trimmedLoc);
+    // 1. Search exact matches in cities.json via Map lookup O(1)
+    let match = cityByName.get(trimmedLoc) || cityByValue.get(trimmedLoc);
 
-    // Substring fallback
-    if (!match) {
+    // 2. Dash substring fallback via Map lookup
+    if (!match && trimmedLoc.includes(' - ')) {
       const parts = trimmedLoc.split(' - ');
       const mainName = parts[0].trim();
-      match = cities.find(c => c.name === mainName || c.value === mainName);
+      match = cityByName.get(mainName) || cityByValue.get(mainName);
     }
 
+    // 3. Longest substring fallback if no exact match found
     if (!match) {
-      // Fuzzy substring fallback
-      match = cities.find(c => trimmedLoc.includes(c.name) || c.name.includes(trimmedLoc));
+      let bestSubMatch: CityInfo | null = null;
+      let maxLen = 0;
+      for (const c of cities) {
+        if (c.name && (trimmedLoc.includes(c.name) || c.name.includes(trimmedLoc))) {
+          if (c.name.length > maxLen) {
+            maxLen = c.name.length;
+            bestSubMatch = c;
+          }
+        }
+      }
+      match = bestSubMatch || undefined;
     }
 
     if (match) {

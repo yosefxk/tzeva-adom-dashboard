@@ -1,3 +1,22 @@
+let sharedAudioCtx: AudioContext | null = null;
+
+export function getAudioContext(): AudioContext {
+  if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+    sharedAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  if (sharedAudioCtx.state === 'suspended') {
+    sharedAudioCtx.resume().catch(() => {});
+  }
+  return sharedAudioCtx;
+}
+
+export function closeAudioContext(): void {
+  if (sharedAudioCtx && sharedAudioCtx.state !== 'closed') {
+    sharedAudioCtx.close().catch(() => {});
+    sharedAudioCtx = null;
+  }
+}
+
 // Play the real Israeli air raid siren (צפירה) using the siren.mp3 static asset
 export function playIsraeliSiren(volume: number = 0.8, onEnded?: () => void): HTMLAudioElement | undefined {
   try {
@@ -6,7 +25,13 @@ export function playIsraeliSiren(volume: number = 0.8, onEnded?: () => void): HT
     if (onEnded) {
       audio.onended = onEnded;
     }
-    audio.play();
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        console.warn('Audio playback blocked by browser:', err);
+        if (onEnded) onEnded();
+      });
+    }
     return audio;
   } catch (err) {
     console.error('Failed to play Israeli siren audio.', err);
@@ -17,7 +42,7 @@ export function playIsraeliSiren(volume: number = 0.8, onEnded?: () => void): HT
 // Synthesize high-frequency warning beeps dynamically using the browser's Web Audio API
 export function playBeepSound(volume: number = 0.8, duration: number = 3.0, onEnded?: () => void) {
   try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioCtx = getAudioContext();
     const gainNode = audioCtx.createGain();
     gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
     gainNode.connect(audioCtx.destination);

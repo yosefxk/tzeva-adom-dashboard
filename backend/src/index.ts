@@ -59,6 +59,48 @@ try {
   console.error('Failed to load cities for express routing cache.', err);
 }
 
+const cityByName = new Map<string, any>();
+const cityByValue = new Map<string, any>();
+citiesCache.forEach(c => {
+  if (c.name) {
+    cityByName.set(c.name, c);
+    const subParts = c.name.split(',');
+    if (subParts.length > 1) {
+      subParts.forEach((sp: string) => {
+        const tr = sp.trim();
+        if (tr && !cityByName.has(tr)) cityByName.set(tr, c);
+      });
+    }
+  }
+  if (c.value) cityByValue.set(c.value, c);
+});
+
+const israelTimeFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Jerusalem',
+  hour: 'numeric',
+  hour12: false,
+  weekday: 'short',
+  year: 'numeric'
+});
+
+const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+function getIsraelTimeParts(timestamp: number | string | Date): { hour: number; day: number; year: number } {
+  const date = new Date(timestamp);
+  const parts = israelTimeFormatter.formatToParts(date);
+  let hour = 0;
+  let year = 2024;
+  let day = date.getUTCDay();
+  for (const p of parts) {
+    if (p.type === 'hour') hour = parseInt(p.value, 10) % 24;
+    if (p.type === 'year') year = parseInt(p.value, 10);
+    if (p.type === 'weekday') {
+      day = weekdayMap[p.value] ?? day;
+    }
+  }
+  return { hour, day, year };
+}
+
 function normalizeString(str: string): string {
   if (!str) return '';
   return str
@@ -264,7 +306,7 @@ function enrichAlertRow(row: any): AlertData {
 app.get('/api/alerts/history', async (req, res) => {
   try {
     const page = parseInt(req.query.page as string, 10) || 1;
-    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string, 10) || 50), 500);
     const offset = (page - 1) * limit;
 
     const search = (req.query.search as string) || '';
@@ -341,22 +383,21 @@ app.get('/api/alerts/heatmap', async (req, res) => {
 
     const whereClause = filters.length > 0 ? and(...filters) : undefined;
 
-    const dbAlerts = await db.select({ locations: alerts.locations })
-      .from(alerts)
-      .where(whereClause);
+    // Use SQL aggregation on alert_locations joined with alerts
+    const cityCountRows = await db
+      .select({
+        cityName: alertLocations.cityName,
+        count: sql<number>`count(*)`
+      })
+      .from(alertLocations)
+      .innerJoin(alerts, eq(alertLocations.alertId, alerts.id))
+      .where(whereClause)
+      .groupBy(alertLocations.cityName);
 
     const cityCounts: { [key: string]: number } = {};
-    dbAlerts.forEach((row: any) => {
-      let locations: string[] = [];
-      try {
-        locations = JSON.parse(row.locations);
-      } catch {
-        locations = [row.locations];
-      }
-      locations.forEach(loc => {
-        const cleaned = loc.split(' - ')[0].trim();
-        cityCounts[cleaned] = (cityCounts[cleaned] || 0) + 1;
-      });
+    cityCountRows.forEach(row => {
+      const cleaned = row.cityName.split(' - ')[0].trim();
+      cityCounts[cleaned] = (cityCounts[cleaned] || 0) + row.count;
     });
 
     res.json(cityCounts);
@@ -416,14 +457,7 @@ app.get('/api/alerts/stats', async (req, res) => {
       };
     });
 
-    // Query top targeted cities & zones matching filter
-    const allAlerts = await db.select({ locations: alerts.locations })
-      .from(alerts)
-      .where(whereClause);
-      
-    const zoneCounts: { [key: string]: number } = {};
-    const cityCounts: { [key: string]: number } = {};
-
+    // Query top targeted cities & zones matching filter via SQL aggregation
     const cleanSearch = search
       .replace(/\s*\(citywide\)\s*/gi, '')
       .replace(new RegExp('\\s*\\u0028\\u05DB\\u05DC\\u05DC\\s+\\u05D4\\u05E2\\u05D9\\u05E8\\u0029\\s*', 'gi'), '')
@@ -436,43 +470,52 @@ app.get('/api/alerts/stats', async (req, res) => {
       (c.zone && normalizeString(c.zone) === normSearch)
     ) : null;
 
-    allAlerts.forEach((row: any) => {
-      let locations: string[] = [];
-      try {
-        locations = JSON.parse(row.locations);
-      } catch {
-        locations = [row.locations];
+    const matchingCities = normSearch ? citiesCache.filter(c => 
+      (c.name_en && normalizeString(c.name_en).includes(normSearch)) ||
+      (c.name && normalizeString(c.name).includes(normSearch)) ||
+      (c.name_ar && normalizeString(c.name_ar).includes(normSearch))
+    ) : [];
+
+    const cityAggregates = await db
+      .select({
+        cityName: alertLocations.cityName,
+        zoneName: alertLocations.zoneName,
+        count: sql<number>`count(*)`
+      })
+      .from(alertLocations)
+      .innerJoin(alerts, eq(alertLocations.alertId, alerts.id))
+      .where(whereClause)
+      .groupBy(alertLocations.cityName, alertLocations.zoneName);
+
+    const zoneCounts: { [key: string]: number } = {};
+    const cityCounts: { [key: string]: number } = {};
+
+    cityAggregates.forEach(row => {
+      let c = cityByName.get(row.cityName) || cityByValue.get(row.cityName);
+      if (!c) {
+        c = citiesCache.find(x => x.name === row.cityName || x.value === row.cityName);
       }
 
       if (normSearch) {
-        locations = locations.filter(loc => {
-          let c = citiesCache.find(x => x.name === loc || x.value === loc);
-          if (!c) {
-            c = citiesCache.find(x => x.name.includes(loc) || x.value.includes(loc));
+        if (matchedZone && matchedZone.zone) {
+          if ((c && c.zone !== matchedZone.zone) && row.zoneName !== matchedZone.zone) return;
+        } else if (matchingCities.length > 0) {
+          const nameNorm = normalizeString(c?.name || row.cityName);
+          const nameEnNorm = normalizeString(c?.name_en || '');
+          const nameArNorm = normalizeString(c?.name_ar || '');
+          if (!nameNorm.includes(normSearch) && !nameEnNorm.includes(normSearch) && !nameArNorm.includes(normSearch)) {
+            return;
           }
-          if (!c) return false;
-          if (matchedZone && matchedZone.zone) {
-             return c.zone === matchedZone.zone;
-          } else {
-             const nameNorm = normalizeString(c.name);
-             const nameEnNorm = normalizeString(c.name_en || '');
-             const nameArNorm = normalizeString(c.name_ar || '');
-             return nameNorm.includes(normSearch) || nameEnNorm.includes(normSearch) || nameArNorm.includes(normSearch);
-          }
-        });
+        }
       }
 
-      if (locations.length === 0) return;
+      const cityEn = c?.name_en || row.cityName;
+      const zoneEn = c?.zone_en || (row.zoneName ? (citiesCache.find(x => x.zone === row.zoneName)?.zone_en || row.zoneName) : null);
 
-      const enrichment = resolveLocationData(locations);
-      
-      enrichment.zones.forEach(z => {
-        zoneCounts[z] = (zoneCounts[z] || 0) + 1;
-      });
-
-      enrichment.locationsEn.forEach(c => {
-        cityCounts[c] = (cityCounts[c] || 0) + 1;
-      });
+      cityCounts[cityEn] = (cityCounts[cityEn] || 0) + row.count;
+      if (zoneEn) {
+        zoneCounts[zoneEn] = (zoneCounts[zoneEn] || 0) + row.count;
+      }
     });
 
     const topZones = Object.entries(zoneCounts)
@@ -496,7 +539,7 @@ app.get('/api/alerts/stats', async (req, res) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    // Timeline distributions (Hourly, Weekly, Yearly) from filtered database rows
+    // Timeline distributions (Hourly, Weekly, Yearly) evaluated in Asia/Jerusalem timezone
     const hourlyDistribution = Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }));
     const weeklyDistribution = Array.from({ length: 7 }, (_, day) => ({ day, count: 0 }));
     const yearlyCounts: { [key: number]: number } = {};
@@ -506,22 +549,19 @@ app.get('/api/alerts/stats', async (req, res) => {
       .where(whereClause);
       
     dbAlerts.forEach((row: any) => {
-      const date = new Date(row.timestamp);
+      const { hour, day, year } = getIsraelTimeParts(row.timestamp);
       
       // Hourly trend
-      const hour = date.getHours();
       if (hour >= 0 && hour < 24) {
         hourlyDistribution[hour].count++;
       }
       
       // Weekly trend (0 = Sun, 1 = Mon, ..., 6 = Sat)
-      const day = date.getDay();
       if (day >= 0 && day < 7) {
         weeklyDistribution[day].count++;
       }
       
       // Yearly trend
-      const year = date.getFullYear();
       if (year > 2000) {
         yearlyCounts[year] = (yearlyCounts[year] || 0) + 1;
       }
