@@ -21,70 +21,8 @@ sqlite.exec('PRAGMA synchronous = NORMAL;');
 
 export const db = drizzle({ client: sqlite, schema });
 
-// Load cities cache helper for mapping locations to zones
-let citiesCache: any[] = [];
-const citiesPath = path.join(__dirname, '../data/cities.json');
-try {
-  if (fs.existsSync(citiesPath)) {
-    citiesCache = JSON.parse(fs.readFileSync(citiesPath, 'utf8'));
-  }
-} catch (err) {
-  console.error('Failed to load cities for db mapping helper.', err);
-}
-
-const cityToZone = new Map<string, string>();
-const cityByName = new Map<string, any>();
-const cityByValue = new Map<string, any>();
-
-citiesCache.forEach(c => {
-  if (c.name) {
-    cityToZone.set(c.name, c.zone || '');
-    cityByName.set(c.name, c);
-    const subParts = c.name.split(',');
-    if (subParts.length > 1) {
-      subParts.forEach((sp: string) => {
-        const tr = sp.trim();
-        if (tr && !cityByName.has(tr)) cityByName.set(tr, c);
-      });
-    }
-  }
-  if (c.value) {
-    cityByValue.set(c.value, c);
-  }
-});
-
-// Resolves any raw alert location name to the canonical name in cities.json
-export function getCanonicalCityName(rawName: string): string {
-  const trimmed = rawName.trim();
-  if (!trimmed) return rawName;
-
-  // 1. Exact match via Map lookup
-  let match = cityByName.get(trimmed) || cityByValue.get(trimmed);
-  if (match) return match.name;
-
-  // 2. Substring dash match
-  if (trimmed.includes(' - ')) {
-    const parts = trimmed.split(' - ');
-    const mainName = parts[0].trim();
-    match = cityByName.get(mainName) || cityByValue.get(mainName);
-    if (match) return match.name;
-  }
-
-  // 3. Fallback to longest substring match to avoid short prefix collision
-  let bestMatch: any = null;
-  let maxLen = 0;
-  for (const c of citiesCache) {
-    if (c.name && (trimmed.includes(c.name) || c.name.includes(trimmed))) {
-      if (c.name.length > maxLen) {
-        maxLen = c.name.length;
-        bestMatch = c;
-      }
-    }
-  }
-  if (bestMatch) return bestMatch.name;
-
-  return trimmed; // fallback to raw
-}
+import { cityToZone, getCanonicalCityName } from './cities.js';
+export { getCanonicalCityName };
 
 // Helper to insert mapping records
 export function insertAlertLocations(alertId: string, locations: string[]) {

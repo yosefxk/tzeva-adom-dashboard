@@ -7,7 +7,14 @@ import { initDatabase, db } from './db.js';
 import { alerts, alertLocations, syncLogs } from './schema.js';
 import { eq, like, and, or, desc, sql, inArray } from 'drizzle-orm';
 import { startPoller, loadRecentAlertIds, resolveLocationData, getCategoryMetadata } from './poller.js';
-import { AlertData, CityInfo } from './types.js';
+import {
+  cities as citiesCache,
+  cityByName,
+  cityByValue,
+  multiAreaRootNames,
+  zoneHeToEn,
+} from './cities.js';
+import { AlertData } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,50 +37,32 @@ if (fs.existsSync(frontendDist)) {
   console.warn(`Frontend dist folder not found at ${frontendDist}. Running in API-only mode.`);
 }
 
-// Load static reference files
-const citiesPath = path.join(__dirname, '../data/cities.json');
+// Load static reference file path for polygons
 const polygonsPath = path.join(__dirname, '../data/polygons.json');
 
-let citiesCache: CityInfo[] = [];
-const multiAreaRootNames = new Set<string>();
+// Bounded TTL caches for expensive stats/heatmap aggregations (invalidated on new alerts)
+const STATS_CACHE_TTL_MS = 5 * 60 * 1000;
+const MAX_AGG_CACHE_ENTRIES = 20;
+const statsCache = new Map<string, { expiresAt: number; payload: any }>();
+const heatmapCache = new Map<string, { expiresAt: number; payload: any }>();
 
-function initMultiAreaRoots() {
-  const rootCounts: Record<string, number> = {};
-  citiesCache.forEach(c => {
-    if (c.name_en) {
-      const rootName = c.name_en.split(' - ')[0].trim();
-      rootCounts[rootName] = (rootCounts[rootName] || 0) + 1;
-    }
-  });
-  Object.entries(rootCounts).forEach(([r, count]) => {
-    if (count > 1) {
-      multiAreaRootNames.add(r);
-    }
-  });
-}
-
-try {
-  citiesCache = JSON.parse(fs.readFileSync(citiesPath, 'utf8'));
-  initMultiAreaRoots();
-} catch (err) {
-  console.error('Failed to load cities for express routing cache.', err);
-}
-
-const cityByName = new Map<string, any>();
-const cityByValue = new Map<string, any>();
-citiesCache.forEach(c => {
-  if (c.name) {
-    cityByName.set(c.name, c);
-    const subParts = c.name.split(',');
-    if (subParts.length > 1) {
-      subParts.forEach((sp: string) => {
-        const tr = sp.trim();
-        if (tr && !cityByName.has(tr)) cityByName.set(tr, c);
-      });
-    }
+function getCached(cache: Map<string, { expiresAt: number; payload: any }>, key: string) {
+  const hit = cache.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expiresAt) {
+    cache.delete(key);
+    return null;
   }
-  if (c.value) cityByValue.set(c.value, c);
-});
+  return hit.payload;
+}
+
+function setCached(cache: Map<string, { expiresAt: number; payload: any }>, key: string, payload: any) {
+  if (cache.size >= MAX_AGG_CACHE_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) cache.delete(oldestKey);
+  }
+  cache.set(key, { expiresAt: Date.now() + STATS_CACHE_TTL_MS, payload });
+}
 
 const israelTimeFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: 'Asia/Jerusalem',
@@ -177,7 +166,7 @@ app.get('/api/status', (req, res) => {
 const ALLOWED_TILE_STYLES = new Set(['light_all', 'dark_all']);
 const TILE_SUBDOMAINS = ['a', 'b', 'c', 'd'];
 const tileCache = new Map<string, { buffer: Buffer; contentType: string }>();
-const MAX_CACHE_TILES = 1500;
+const MAX_CACHE_TILES = 300;
 
 app.get('/api/tiles/:style/:z/:x/:tileFile', async (req, res) => {
   const { style, z, x, tileFile } = req.params;
@@ -265,7 +254,17 @@ app.get('/api/alerts/live', (req, res) => {
 
   // Connection keep-alive heartbeat interval (15s)
   const heartbeat = setInterval(() => {
-    res.write(': keepalive\n\n');
+    try {
+      if (res.writableEnded || res.destroyed) {
+        clearInterval(heartbeat);
+        sseClients = sseClients.filter(client => client !== res);
+        return;
+      }
+      res.write(': keepalive\n\n');
+    } catch {
+      clearInterval(heartbeat);
+      sseClients = sseClients.filter(client => client !== res);
+    }
   }, 15000);
 
   req.on('close', () => {
@@ -370,6 +369,10 @@ app.get('/api/alerts/history', async (req, res) => {
 // Heatmap endpoint to fetch siren counts per city in a timeframe
 app.get('/api/alerts/heatmap', async (req, res) => {
   try {
+    const cacheKey = `${req.query.startTimestamp || ''}|${req.query.endTimestamp || ''}`;
+    const cached = getCached(heatmapCache, cacheKey);
+    if (cached) return res.json(cached);
+
     const startTimestamp = req.query.startTimestamp ? parseInt(req.query.startTimestamp as string, 10) : null;
     const endTimestamp = req.query.endTimestamp ? parseInt(req.query.endTimestamp as string, 10) : null;
 
@@ -400,6 +403,7 @@ app.get('/api/alerts/heatmap', async (req, res) => {
       cityCounts[cleaned] = (cityCounts[cleaned] || 0) + row.count;
     });
 
+    setCached(heatmapCache, cacheKey, cityCounts);
     res.json(cityCounts);
   } catch (err: any) {
     res.status(500).json({ error: `Failed to fetch heatmap data: ${err.message}` });
@@ -413,6 +417,10 @@ app.get('/api/alerts/stats', async (req, res) => {
     const category = req.query.category ? parseInt(req.query.category as string, 10) : null;
     const startTimestamp = req.query.startTimestamp ? parseInt(req.query.startTimestamp as string, 10) : null;
     const endTimestamp = req.query.endTimestamp ? parseInt(req.query.endTimestamp as string, 10) : null;
+
+    const cacheKey = `${search}|${category ?? ''}|${startTimestamp ?? ''}|${endTimestamp ?? ''}`;
+    const cached = getCached(statsCache, cacheKey);
+    if (cached) return res.json(cached);
 
     const filters = [];
     if (search) {
@@ -510,7 +518,7 @@ app.get('/api/alerts/stats', async (req, res) => {
       }
 
       const cityEn = c?.name_en || row.cityName;
-      const zoneEn = c?.zone_en || (row.zoneName ? (citiesCache.find(x => x.zone === row.zoneName)?.zone_en || row.zoneName) : null);
+      const zoneEn = c?.zone_en || (row.zoneName ? (zoneHeToEn.get(row.zoneName) || row.zoneName) : null);
 
       cityCounts[cityEn] = (cityCounts[cityEn] || 0) + row.count;
       if (zoneEn) {
@@ -571,7 +579,7 @@ app.get('/api/alerts/stats', async (req, res) => {
       .map(([year, count]) => ({ year: parseInt(year, 10), count }))
       .sort((a, b) => a.year - b.year);
 
-    res.json({
+    const payload = {
       totalAlerts,
       categoriesDistribution,
       topZones,
@@ -579,7 +587,9 @@ app.get('/api/alerts/stats', async (req, res) => {
       hourlyDistribution,
       weeklyDistribution,
       yearlyDistribution
-    });
+    };
+    setCached(statsCache, cacheKey, payload);
+    res.json(payload);
   } catch (err: any) {
     res.status(500).json({ error: `Failed to compile stats: ${err.message}` });
   }
@@ -626,12 +636,22 @@ async function main() {
 
   // 3. Start Oref background poller
   startPoller((alert: AlertData) => {
+    // Invalidate stats/heatmap caches when a new alert arrives
+    statsCache.clear();
+    heatmapCache.clear();
+
     // Broadcast incoming alert payload to all connected SSE clients
     console.log(`📡 SSE Broadcast: [${alert.id}] ${alert.title} - ${alert.locationsEn.join(', ')}`);
-    
+
     const ssePayload = JSON.stringify({ type: 'alert', data: alert });
-    sseClients.forEach(client => {
-      client.write(`data: ${ssePayload}\n\n`);
+    sseClients = sseClients.filter(client => {
+      try {
+        if (client.writableEnded || client.destroyed) return false;
+        client.write(`data: ${ssePayload}\n\n`);
+        return true;
+      } catch {
+        return false;
+      }
     });
   });
 
